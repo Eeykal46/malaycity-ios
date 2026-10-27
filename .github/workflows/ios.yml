@@ -69,7 +69,25 @@ jobs:
             CODE_SIGN_IDENTITY="" \
             build
 
-      - name: Bungkus jadi .ipa
+      - name: Sahkan shim dikompil ke binari
+        working-directory: ios
+        run: |
+          # Build pertama GAGAL SENYAP: mc_ios_shim.mm tidak dikompil (type: group),
+          # jadi simbol AAsset/__android_log/slCreate tiada dlm binari.
+          # Langkah ini memastikan ia TIDAK berulang.
+          BIN="build/Build/Products/Release-iphoneos/McLauncher.app/McLauncher"
+          test -f "$BIN" || { echo "::error::binari tiada"; exit 1; }
+          gagal=0
+          for sym in AAssetManager_open __android_log_print slCreateEngine __system_property_get; do
+            if strings "$BIN" | grep -q "$sym"; then
+              echo "OK   $sym"
+            else
+              echo "::error::SIMBOL HILANG: $sym (shim tidak dikompil?)"
+              gagal=1
+            fi
+          done
+          exit $gagal
+
         working-directory: ios
         run: |
           set -e

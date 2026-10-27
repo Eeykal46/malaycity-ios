@@ -38,10 +38,10 @@ targets:
       - path: launcher
         type: folder
       # Fasa 3: lapisan ganti Android -> iOS untuk enjin GTA SA.
-      # Dikompil ke .app supaya ralat C++/ObjC++ ditangkap oleh build, bukan
-      # baru dijumpai bila enjin dimuatkan di iPhone.
+      # NOTA: TANPA `type:` supaya XcodeGen menganggapnya sebagai SOURCE
+      # (dikompil). `type: group` hanya kumpulan navigasi - fail tidak dikompil,
+      # itulah sebabnya simbol shim tiada dlm binari pada build pertama.
       - path: enjin
-        type: group
     settings:
       base:
         # shim guna os_log, EAGLContext, mmap - perlu disasarkan ke iOS 17
