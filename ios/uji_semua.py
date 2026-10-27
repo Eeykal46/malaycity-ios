@@ -17,6 +17,7 @@ UJIAN = [
     ('Jambatan JS <-> Swift (11 arahan, 11 event)', ['node', os.path.join(HERE, 'semak_bridge.js')]),
     ('Tab Diagnostik (render + nilai dinamik)', ['node', os.path.join(HERE, 'uji_diagnostik.js')]),
     ('Shim iOS meliputi 20 simbol Android', [sys.executable, os.path.join(HERE, 'alat', 'uji_shim.py')]),
+    ('Peta alamat -> simbol (166/199)', [sys.executable, os.path.join(HERE, 'alat', 'uji_peta.py')]),
     ('McIni - settings.ini (komen kekal, round-trip)', [sys.executable, os.path.join(HERE, 'uji_ini.py')]),
     ('McQuery - paket SA-MP UDP i', [sys.executable, os.path.join(HERE, 'uji_query.py')]),
     ('check() - status manifest', [sys.executable, os.path.join(HERE, 'uji_check.py')]),
