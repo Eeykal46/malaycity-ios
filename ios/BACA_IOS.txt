@@ -1,6 +1,20 @@
 MALAYCITY iOS — LAUNCHER (Fasa 1)
-Bina IPA di GitHub, pasang di iPhone tanpa Mac.                     27 Okt 2026
+Repo: https://github.com/Eeykal46/malaycity-ios                    27 Okt 2026
 =======================================================================================
+
+>>> DAH SIAP. IPA SUDAH DIBINA & DISAHKAN. KAU CUMA PERLU PASANG. <<<
+    https://github.com/Eeykal46/malaycity-ios/actions
+    -> klik run paling atas (tanda hijau) -> bawah "Artifacts" -> "McLauncher-ipa"
+    -> unzip -> McLauncher.ipa -> Sideloadly (LANGKAH 3 di bawah)
+
+    Build terakhir: SUCCESS, IPA 2.91 MB. Kandungan disahkan:
+      launcher/index.html 30773 bait (UI sama dgn Android)
+      binari arm64 (cputype 16777228), BundleID com.malaycity.mobile.ios
+      MALAYCITY v1.0.0 (1), landscape, minOS 17.0
+
+CARA KEMAS KINI NANTI (selepas ini):
+    Double-click  D:\MALAYCITY_FULL\SIMPAN_IOS.bat
+    Ia salin ios\ -> repo awam, commit, push, dan tunjuk pautan Actions.
 
 APA YANG SUDAH SIAP (Fasa 1 sahaja)
   ios/                              projek Xcode (dijana XcodeGen, .xcodeproj tak masuk repo)
@@ -27,36 +41,17 @@ APA YANG BELUM (Fasa 3-5, lihat NOTA_PROJEK.txt:3688-3701)
   "Enjin GTA SA untuk iOS belum sedia". Itu memang dijangka.
 
 =======================================================================================
-LANGKAH 1 — MASUKKAN FOLDER ios/ KE REPO GITHUB
+LANGKAH 1 & 2 — DAH SIAP (aku buat 27 Okt, kau tak perlu buat apa-apa)
 =======================================================================================
-Repo perlu di GitHub (percuma untuk repo awam; runner macOS percuma untuk repo awam).
-Kalau belum ada repo:
-  1. Buat repo baru di github.com (cth "malaycity"), JANGAN tick "Add a README".
-  2. Di folder D:\MALAYCITY_FULL, jalankan (ganti URL dgn repo kau):
+  Repo dicipta  : https://github.com/Eeykal46/malaycity-ios (AWAM, 23 fail, 1.56 MB)
+  Push          : commit 27ac0a4
+  Build         : SUCCESS (run 40470821979 & 40470843978)
+  Artifact      : "McLauncher-ipa" (2.91 MB)
 
-       git init
-       git add .
-       git commit -m "iOS launcher Fasa 1"
-       git branch -M main
-       git remote add origin https://github.com/NAMA/repo.git
-       git push -u origin main
+  Repo awam ini HANYA berisi ios/ + .github/. Gamemode, plugin, client Android,
+  PC ASI kekal peribadi di PC kau. Runner macOS percuma sebab repo awam.
 
-  Kalau repo sudah ada: git add . ; git commit -m "iOS launcher Fasa 1" ; git push
-
-  PENTING: fail .github/workflows/ios.yml MESTI ikut serta. Tanpa ia, tiada build.
-
-=======================================================================================
-LANGKAH 2 — JALANKAN BUILD
-=======================================================================================
-  1. Buka repo di GitHub -> tab "Actions".
-  2. Kiri: "Bina IPA iOS" -> butang "Run workflow" -> "Run workflow".
-  3. Tunggu ~10-20 minit (kali pertama lambat: install xcodegen + bina).
-  4. Bila selesai (tanda hijau), klik run itu -> bawah, "Artifacts" ->
-     muat turun "McLauncher-ipa" (fail zip berisi McLauncher.ipa).
-
-  Kalau tanda MERAH: klik run -> job "build" -> step yg merah -> hantar teks ralat itu.
-  Workflow ini GAGAL SENGAJA kalau launcher/index.html tiada dlm bundle - itu cek
-  bahawa HTML benar-benar masuk ke dlm app.
+  Kalau nanti kau ubah kod: double-click SIMPAN_IOS.bat (dlm MALAYCITY_FULL).
 
 =======================================================================================
 LANGKAH 3 — PASANG DI IPHONE (Sideloadly + Apple ID percuma)
@@ -142,4 +137,6 @@ FAKTA YANG DISAHKAN UJIAN
     hostname/password; nama UTF-8 OK; server senyap -> online=false tanpa crash.
   - check(): 6 status (ok/need/app_required/app_update/offline/error) sepadan
     dgn McDownloader.java; host/port/password TIDAK dihantar ke HTML.
+
+
 
