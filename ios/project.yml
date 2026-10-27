@@ -37,12 +37,25 @@ targets:
       # (`launcher/` = salinan index.html Android, dibuat oleh preGenCommand di atas)
       - path: launcher
         type: folder
+      # Fasa 3: lapisan ganti Android -> iOS untuk enjin GTA SA.
+      # Dikompil ke .app supaya ralat C++/ObjC++ ditangkap oleh build, bukan
+      # baru dijumpai bila enjin dimuatkan di iPhone.
+      - path: enjin
+        type: group
+    settings:
+      base:
+        # shim guna os_log, EAGLContext, mmap - perlu disasarkan ke iOS 17
+        IPHONEOS_DEPLOYMENT_TARGET: "17.0"
+        CLANG_CXX_LANGUAGE_STANDARD: "c++20"
+        CLANG_ENABLE_OBJC_ARC: YES
     dependencies:
       # UJIAN KRITIKAL: adakah OpenGL ES masih berfungsi di iOS 26?
       # GLProbe.swift guna EAGLContext + shader + render sebenar.
       # Deprecated sejak iOS 12 tetapi MASIH ADA - ini yang diuji.
       - sdk: OpenGLES.framework
       - sdk: GLKit.framework
+      - sdk: AudioToolbox.framework
+      - sdk: AVFoundation.framework
     settings:
       base:
         PRODUCT_NAME: McLauncher
