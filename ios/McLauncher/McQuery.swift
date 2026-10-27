@@ -21,7 +21,9 @@ enum McQuery {
             // jadi soket ditutup setiap pusingan - termasuk bila `continue`.
             defer { close(sock) }
 
-            var tv = timeval(tv_sec: timeoutMs / 1000, tv_usec: (timeoutMs % 1000) * 1000)
+            // tv_usec = __darwin_suseconds_t (Int32), tv_sec = Int: mesti cast eksplisit.
+            var tv = timeval(tv_sec: timeoutMs / 1000,
+                             tv_usec: __darwin_suseconds_t((timeoutMs % 1000) * 1000))
             setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, &tv, socklen_t(MemoryLayout<timeval>.size))
             setsockopt(sock, SOL_SOCKET, SO_SNDTIMEO, &tv, socklen_t(MemoryLayout<timeval>.size))
 
