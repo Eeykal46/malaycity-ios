@@ -131,6 +131,7 @@ final class LauncherViewController: UIViewController {
         setNick:      function(n){ post("setNick", [n]); },
         setSetting:   function(k, v){ post("setSetting", [k, String(v)]); },
         getSettings:  function(){ return window.__mcSettings || "{}"; },
+        iosInfo:      function(){ post("iosInfo"); },
         openUrl:      function(u){ post("openUrl", [u]); },
         exitApp:      function(){ post("exitApp"); },
         play:         function(n){ post("play", [n]); }
@@ -198,6 +199,18 @@ final class LauncherViewController: UIViewController {
         return downloader()
     }
 
+    /// Maklumat platform untuk HTML papar mesej yg betul.
+    /// Enjin GTA SA untuk iOS belum wujud (lihat NOTA_PROJEK.txt Fasa 3-5),
+    /// jadi launcher berterus-terang: main di Android buat masa ini.
+    private func emitIosInfo() {
+        emit("iosInfo", [
+            "platform": "ios",
+            "engine": false,
+            "androidUrl": "https://malaycity.com/mobile/MALAYCITY.apk",
+            "note": "Klien GTA SA untuk iOS sedang dibangunkan. Buat masa ini, main di Android.",
+        ])
+    }
+
     private func doCheck() {
         guard let d = waitDownloader() else { return }
         emit("checking", ["text": "Menyemak kemas kini…"])
@@ -245,6 +258,7 @@ final class LauncherViewController: UIViewController {
                 st["settings"] = set
                 self.updateSettingsCache(set)
                 self.emit("state", st)
+                self.emitIosInfo()
                 self.doCheck()
             }
 
@@ -278,6 +292,9 @@ final class LauncherViewController: UIViewController {
                 let port = (srv["port"] as? NSNumber)?.intValue ?? 7777
                 self.emit("query", McQuery.query(host: host, port: port, timeoutMs: 2500))
             }
+
+        case "iosInfo":
+            emitIosInfo()
 
         case "setNick":
             let n = (args.first as? String) ?? ""
@@ -357,8 +374,13 @@ final class LauncherViewController: UIViewController {
             let host = (srv["host"] as? String) ?? ""
             let port = (srv["port"] as? NSNumber)?.intValue ?? 7777
             NSLog("[MC] play nick=%@ server=%@:%d", nick, host, port)
+
+            // Enjin GTA SA iOS belum wujud. Nama & tetapan SUDAH disimpan (di atas),
+            // jadi bila enjin siap, nama pemain sudah sedia. Sekarang: arahkan ke Android.
             self.emit("playError", [
-                "message": "Enjin GTA SA untuk iOS belum sedia (Fasa 3-5). Launcher OK, tetapan disimpan.",
+                "message": "Klien iOS belum sedia. Nama disimpan. Muat turun app Android untuk main sekarang.",
+                "androidUrl": "https://malaycity.com/mobile/MALAYCITY.apk",
+                "offerAndroid": true,
             ])
         }
     }

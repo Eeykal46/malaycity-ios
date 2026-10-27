@@ -193,6 +193,7 @@ button{font:inherit;color:inherit;background:none;border:none;cursor:pointer}
       <input id="nick" maxlength="20" placeholder="Nama_Watak" autocomplete="off" autocapitalize="off" spellcheck="false">
     </div>
     <div class="pill" id="srvPill"><span class="l"><i class="dot y" id="srvDot"></i><span id="srvName">MALAYCITY</span></span><span class="muted" style="font-size:12px" id="srvPing">…</span></div>
+    <div id="iosNote" style="display:none;font-size:12px;line-height:1.45;color:var(--grey);padding:0 2px"></div>
     <div class="sp" style="flex:1"></div>
     <div id="playRow">
       <button class="pill btnred" id="btnPlay">MAIN</button>
@@ -342,7 +343,22 @@ var H = {
     if(S.screen==="sDl"){ modal("Henti muat turun?","Muat turun akan disambung bila buka app semula.",[{t:"Teruskan"},{t:"Keluar",red:true,f:function(){call("exitApp");}}]); return; }
     call("exitApp");
   },
-  playError: function(d){ island("err", d.message||"Tidak dapat mula"); $("btnPlay").disabled=false; }
+  playError: function(d){
+    island("err", d.message||"Tidak dapat mula");
+    $("btnPlay").disabled=false;
+    // Klien iOS belum sedia: tawarkan app Android supaya pemain boleh main sekarang.
+    if(d.offerAndroid && d.androidUrl){
+      modal("Klien iOS belum sedia",
+        (d.message||"") + "\n\nApp Android guna server dan akaun yang sama.",
+        [{t:"Nanti"},
+         {t:"Muat turun Android",red:true,f:function(){ call("openUrl", d.androidUrl); }}]);
+    }
+  },
+  iosInfo: function(d){
+    S.ios = d||{};
+    var b=$("iosNote");
+    if(b && d && d.note){ b.textContent = d.note; b.style.display="block"; }
+  }
 };
 
 /* ================= aliran ================= */

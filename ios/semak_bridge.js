@@ -8,8 +8,8 @@ const fs = require('fs');
 const path = require('path');
 
 const calon = [
+  path.join(__dirname, 'launcher', 'index.html'),          // versi iOS (diubah untuk iOS)
   path.join(__dirname, '..', 'mobile', 'app', 'src', 'main', 'assets', 'launcher', 'index.html'),
-  path.join(__dirname, 'launcher', 'index.html'),
 ];
 const HTML = calon.find(p => fs.existsSync(p));
 if (!HTML) {

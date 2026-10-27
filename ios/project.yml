@@ -13,9 +13,11 @@ options:
   deploymentTarget:
     iOS: "17.0"
   # Sumber UI: satu sumber kebenaran = index.html Android.
-  #   Repo PENUH  : mobile/app/src/main/assets/launcher wujud -> disalin semula setiap generate.
+  #   Repo PENUH  : mobile/.../launcher wujud -> disalin semula setiap generate.
   #   Repo SLIM   : folder itu tiada -> guna `launcher/` yg sudah dikomit (salinan sama).
-  # `test -f launcher/index.html` memastikan build GAGAL awal kalau HTML hilang.
+  # PENTING: `ios/launcher/` dan `mobile/.../launcher/` MESTI kekal sama.
+  # Kalau kau ubah salah satu, salin ke yang lain (atau jalankan SIMPAN_IOS.bat
+  # yang menyemak ini). `test -f` memastikan build GAGAL awal kalau HTML hilang.
   preGenCommand: "sh -c 'set -e; D=../mobile/app/src/main/assets/launcher; if [ -f \"$D/index.html\" ]; then rm -rf launcher; cp -R \"$D\" launcher; fi; test -f launcher/index.html'"
 
 settings:
