@@ -31,6 +31,7 @@ final class LauncherViewController: UIViewController {
     /// (Dulu dihantar sejurus selepas dijalankan -> HTML belum ada handler -> hilang.)
     private var glResult: GLProbe.Result?
     private var loadResult: MCLoadProbe.Result?
+    private var huskLaporan = ""
     private var htmlReady = false
     private let glLock = NSLock()
 
@@ -198,6 +199,9 @@ final class LauncherViewController: UIViewController {
             NSLog("%@", ld.report)
             self.glLock.lock(); self.loadResult = ld; self.glLock.unlock()
 
+            // UJIAN HUSK: adakah translation layer benar-benar dilink?
+            self.ujianHusk()
+
             self.sendGlProbeIfReady()
 
             let d = McDownloader(dataRoot: McConfig.dataRoot,
@@ -278,6 +282,40 @@ final class LauncherViewController: UIViewController {
                 "report": ld.report,
             ])
         }
+    }
+
+    /// Ujian Husk: adakah API translation layer ada, dan apa kata ujian peranti?
+    /// Ini yang menentukan sama ada APK Android boleh dijalankan di app ini.
+    private func ujianHusk() {
+        let h = McHusk.shared
+        var lap = "=== TRANSLATION LAYER (HUSK) ===\n"
+        lap += "API dilink : \(h.tersedia ? "YA" : "TIDAK")\n"
+
+        if !h.tersedia {
+            lap += "\nHusk tidak dilink. Semak:\n"
+            lap += "  - ios/husk/*.c dimasukkan sbg source dlm project.yml\n"
+            lap += "  - simbol husk_tl_* tidak di-strip\n"
+        } else {
+            let chk = h.ujianPeranti(bolehLaksana: false)
+            lap += "\nUJIAN PERANTI:\n\(chk)\n"
+
+            // APK dlm Documents?
+            let dir = McConfig.dataRoot
+            let apks = (try? FileManager.default.contentsOfDirectory(atPath: dir.path))?
+                .filter { $0.lowercased().hasSuffix(".apk") } ?? []
+            lap += "\nAPK dlm Documents: \(apks.count)"
+            if let a = apks.first {
+                lap += " (\(a))"
+                let rep = h.laporanScan(apk: dir.appendingPathComponent(a).path)
+                lap += "\nLAPORAN SCAN:\n\(rep.prefix(1500))"
+            } else {
+                lap += "\n(tiada APK - salin MALAYCITY.apk ke app Files utk uji)"
+            }
+        }
+
+        NSLog("%@", lap)
+        glLock.lock(); huskLaporan = lap; glLock.unlock()
+        if htmlReady { emit("huskProbe", ["report": lap, "ada": h.tersedia]) }
     }
 
     private func doCheck() {

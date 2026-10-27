@@ -397,6 +397,11 @@ var H = {
     // Hasil ujian MUAT ENJIN (ELF vs Mach-O).
     S.load = d||{};
     if(S.screen==="sSet" && S.tab==="d") renderTab("d");
+  },
+  huskProbe: function(d){
+    // Hasil ujian TRANSLATION LAYER (Husk).
+    S.husk = d||{};
+    if(S.screen==="sSet" && S.tab==="d") renderTab("d");
   }
 };
 
@@ -500,6 +505,8 @@ var TABS=[
     {n:"Laporan muat enjin",d:"",t:"pre2",k:"__loadreport"},
     {n:"Server",d:"",t:"info",k:"__srv"},
     {n:"Platform",d:"",t:"info",k:"__plat"},
+    {n:"Translation layer",d:"Husk dilink?",t:"din3",k:"__husk"},
+    {n:"Laporan Husk",d:"",t:"pre3",k:"__huskreport"},
     {n:"Fail laporan",d:"gl_report.txt dlm app Files",t:"info",k:"dataDir"}]}
 ];
 function renderTabs(){
@@ -524,6 +531,8 @@ function renderTab(id){
   S.settings.__plat = (S.platform||"iOS") + (S.ios && S.ios.engine===false ? " · enjin belum ada" : "");
   S.settings.__glreport = (S.gl && S.gl.report) || "";
   S.settings.__loadreport = (S.load && S.load.report) || "";
+  S.settings.__huskreport = (S.husk && S.husk.report) || "";
+  S.settings.__husk = (S.husk && S.husk.ada) ? "dilink" : "tidak";
   var tab=TABS.filter(function(x){return x.id===id;})[0], body=$("setBody"); body.innerHTML="";
   tab.opts.forEach(function(o){
     var r=document.createElement("div"); r.className="opt";
@@ -572,6 +581,22 @@ function renderTab(id){
         r.style.flexWrap="wrap";
         r.appendChild(ring);
       }
+    } else if(o.t==="din3"){
+      var hk2=S.husk||{};
+      var c3=document.createElement("div");
+      c3.style.cssText="font-size:12px;text-align:right;font-weight:700;max-width:62%;word-break:break-word";
+      if(!hk2.report){ c3.textContent="belum diuji"; c3.style.color="#8E8E93"; }
+      else if(hk2.ada){ c3.textContent="DILINK"; c3.style.color="#30D158"; }
+      else { c3.textContent="TIDAK"; c3.style.color="#FF6B80"; }
+      r.appendChild(c3);
+    } else if(o.t==="pre3"){
+      var pr3=document.createElement("pre");
+      pr3.style.cssText="flex:1 1 100%;font-family:ui-monospace,Menlo,monospace;font-size:10px;line-height:1.4;white-space:pre-wrap;max-height:44vh;overflow:auto;background:rgba(0,0,0,.4);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:8px;margin:6px 0 0";
+      var hk3=S.husk||{};
+      pr3.textContent=(hk3.report||"(ujian belum dijalankan)").trim();
+      pr3.style.color = hk3.ada ? "#30D158" : "#FF6B80";
+      r.style.flexWrap="wrap";
+      r.appendChild(pr3);
     } else if(o.t==="pre2"){
       var pr2=document.createElement("pre");
       pr2.style.cssText="flex:1 1 100%;font-family:ui-monospace,Menlo,monospace;font-size:10px;line-height:1.4;white-space:pre-wrap;max-height:40vh;overflow:auto;background:rgba(0,0,0,.4);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:8px;margin:6px 0 0";
