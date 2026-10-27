@@ -1,0 +1,11 @@
+*.ipa
+Payload/
+ios/*.xcodeproj
+ios/*.xcworkspace
+ios/build/
+ios/DerivedData/
+ios/**/xcuserdata/
+ios/launcher/.DS_Store
+.DS_Store
+__pycache__/
+*.pyc

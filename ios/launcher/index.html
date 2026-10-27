@@ -1,0 +1,522 @@
+<!doctype html>
+<!--
+  MALAYCITY Launcher (gaya Pulau Dinamik) - satu halaman, 4 skrin:
+    splash -> (muat turun) -> utama -> tetapan
+  Jambatan Java: window.MCNative (LauncherActivity.java). Java -> JS: MCL.on(event, data).
+  Dibuka terus dlm pelayar PC (tanpa MCNative) = mod demo (simulasi) utk semak rupa.
+  Media pilihan (letak sendiri): media/bg.mp4 (video latar), media/music.mp3 (muzik muat turun).
+-->
+<html lang="ms">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<title>MALAYCITY</title>
+<style>
+:root{--bg:#0B0508;--red:#FF2E4D;--red2:#FF8A9A;--txt:#F5F5F7;--grey:#8E8E93;--green:#30D158;
+  --glass:rgba(255,255,255,.07);--line:rgba(255,255,255,.14);--pill:clamp(38px,11vh,48px)}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;user-select:none;-webkit-user-select:none}
+html,body{width:100%;height:100%;overflow:hidden;background:var(--bg);color:var(--txt);
+  font-family:Inter,-apple-system,"SF Pro Display",Roboto,system-ui,sans-serif}
+input{user-select:text;-webkit-user-select:text}
+button{font:inherit;color:inherit;background:none;border:none;cursor:pointer}
+
+/* ---------- latar ---------- */
+#bg{position:fixed;inset:0;z-index:0;overflow:hidden}
+#bgArt{position:absolute;inset:-10%;background:
+  radial-gradient(55% 75% at 25% 70%,rgba(255,46,77,.30),transparent 60%),
+  radial-gradient(40% 50% at 85% 10%,rgba(255,138,154,.12),transparent 70%),
+  linear-gradient(160deg,#1a0a10 0%,#0B0508 55%,#050203 100%);animation:drift 24s ease-in-out infinite alternate}
+@keyframes drift{from{transform:translate3d(0,0,0) scale(1)}to{transform:translate3d(-3%,2%,0) scale(1.06)}}
+#bgVideo{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0;transition:opacity .8s}
+#bgVideo.on{opacity:.55}
+#bgShade{position:absolute;inset:0;background:linear-gradient(90deg,rgba(11,5,8,.85) 0%,rgba(11,5,8,.35) 55%,rgba(11,5,8,.75) 100%),linear-gradient(to top,rgba(11,5,8,.9),transparent 45%)}
+
+/* ---------- pulau dinamik ---------- */
+#island{position:fixed;top:max(8px,env(safe-area-inset-top));left:50%;transform:translateX(-50%);z-index:50;
+  height:34px;max-width:86vw;padding:0 16px 0 11px;border-radius:999px;background:#000;display:flex;align-items:center;gap:9px;
+  font-weight:600;font-size:13px;white-space:nowrap;box-shadow:0 0 0 1px rgba(255,255,255,.07),0 8px 24px rgba(0,0,0,.6);
+  transition:width .3s,background .3s}
+#island .txt{overflow:hidden;text-overflow:ellipsis}
+#island.err{animation:shake .5s 3}
+#island.err .txt{color:#ff6b80}
+@keyframes shake{0%,100%{transform:translateX(-50%)}25%{transform:translateX(calc(-50% - 6px))}75%{transform:translateX(calc(-50% + 6px))}}
+.dot{display:block;width:9px;height:9px;border-radius:50%;background:var(--red);box-shadow:0 0 10px var(--red);flex:none}
+.dot.g{background:var(--green);box-shadow:0 0 10px var(--green)}
+.dot.y{background:#FFD60A;box-shadow:0 0 10px #FFD60A}
+.spin{width:14px;height:14px;border-radius:50%;border:2px solid rgba(255,255,255,.18);border-top-color:var(--red);animation:rot .8s linear infinite;flex:none}
+@keyframes rot{to{transform:rotate(360deg)}}
+
+/* ---------- komponen ---------- */
+.screen{position:fixed;inset:0;z-index:10;opacity:0;pointer-events:none;transition:opacity .35s}
+.screen.on{opacity:1;pointer-events:auto}
+.brand{font-weight:800;letter-spacing:-.04em;line-height:1}
+.brand span,.grad{background:linear-gradient(90deg,var(--red),var(--red2));-webkit-background-clip:text;background-clip:text;color:transparent}
+.muted{color:var(--grey)}
+.glass{background:var(--glass);border:1px solid var(--line);border-radius:26px;background-color:rgba(24,12,16,.72)}
+.pill{height:var(--pill);border-radius:999px;background:var(--glass);border:1px solid var(--line);display:flex;align-items:center;
+  padding:0 16px;gap:10px;font-weight:600;font-size:14px;min-width:0}
+.pill.act{background:rgba(255,46,77,.18);border-color:rgba(255,46,77,.55)}
+.btnred{background:var(--red);border-color:var(--red);color:#fff;justify-content:center;font-weight:800;letter-spacing:.02em;
+  box-shadow:0 0 26px rgba(255,46,77,.55);transition:transform .12s,filter .12s}
+.btnred:active,.round:active,.pill:active{transform:scale(.96)}
+.btnred[disabled]{filter:grayscale(1) brightness(.6);box-shadow:none}
+.round{width:var(--pill);height:var(--pill);border-radius:50%;display:flex;align-items:center;justify-content:center;
+  background:var(--glass);border:1px solid var(--line);flex:none}
+.ico{width:18px;height:18px;stroke:#fff;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.tag{display:inline-block;font-weight:700;font-size:10.5px;letter-spacing:.08em;color:var(--red);background:rgba(255,46,77,.12);
+  border:1px solid rgba(255,46,77,.35);padding:4px 10px;border-radius:999px}
+
+/* ---------- splash ---------- */
+#sSplash{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px}
+#sSplash .brand{font-size:clamp(40px,13vh,64px)}
+#sSplash .sub{color:var(--grey);font-size:14px;font-weight:500}
+#retry{margin-top:18px;display:none}
+.ver{position:fixed;bottom:12px;width:100%;text-align:center;color:var(--grey);font-size:11.5px}
+
+/* ---------- muat turun ---------- */
+#sDl{display:flex;align-items:center;justify-content:center;gap:clamp(18px,5vw,48px);padding:50px 24px 20px}
+#ring{width:clamp(120px,40vh,170px);height:clamp(120px,40vh,170px);flex:none}
+#ring .arc{transition:stroke-dashoffset .4s;filter:drop-shadow(0 0 8px var(--red))}
+.dlbox{display:flex;flex-direction:column;gap:10px;width:min(380px,52vw)}
+.dlbox h2{font-weight:800;font-size:clamp(18px,6vh,24px);letter-spacing:-.02em}
+.bar{height:8px;border-radius:999px;background:rgba(255,255,255,.08);overflow:hidden}
+.bar>div{height:100%;width:0;background:var(--red);box-shadow:0 0 12px var(--red);transition:width .4s}
+.row{display:flex;justify-content:space-between;gap:8px;font-size:12px}
+#dlFile{height:38px;font-size:13px}
+#dlFile span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#muteBtn{position:fixed;top:max(8px,env(safe-area-inset-top));right:16px;width:38px;height:38px;z-index:51}
+#dlActions{display:flex;gap:10px;margin-top:4px}
+
+/* ---------- utama (4A panel kanan) ---------- */
+#news{position:absolute;left:clamp(18px,4vw,40px);top:clamp(54px,16vh,80px);width:min(470px,50vw)}
+#newsTitle{font-weight:800;font-size:clamp(22px,8vh,34px);letter-spacing:-.03em;margin:10px 0 8px;line-height:1.05}
+#newsText{font-size:13.5px;line-height:1.45;max-height:4.4em;overflow:hidden}
+#newsDots{display:flex;gap:6px;margin-top:14px}
+#newsDots i{width:6px;height:6px;border-radius:9px;background:#555;transition:all .3s}
+#newsDots i.on{width:22px;background:var(--red)}
+#newsImg{position:absolute;inset:0;background-size:cover;background-position:center;opacity:0;transition:opacity .8s;z-index:-1}
+#newsImg.on{opacity:.35}
+#panel{position:absolute;right:clamp(12px,2.4vw,24px);top:clamp(50px,14vh,64px);bottom:clamp(12px,4vh,22px);width:clamp(260px,36vw,330px);
+  padding:16px;display:flex;flex-direction:column;gap:10px}
+#panel .brand{font-size:clamp(22px,7vh,28px)}
+#panel label{font-size:11.5px;color:var(--grey);margin:-4px 0 -4px 4px}
+#nick{flex:1;min-width:0;background:none;border:none;outline:none;color:#fff;font:600 14px inherit;font-family:inherit}
+#nickPill.bad{border-color:var(--red);animation:shake2 .4s}
+@keyframes shake2{25%{transform:translateX(-5px)}75%{transform:translateX(5px)}}
+#srvPill{justify-content:space-between}
+#srvPill .l{display:flex;align-items:center;gap:8px;min-width:0}
+#srvName{overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+#playRow{display:flex;gap:10px}
+#btnPlay{flex:1;height:calc(var(--pill) + 6px);font-size:16px}
+#btnSet{width:calc(var(--pill) + 6px);height:calc(var(--pill) + 6px)}
+#social{display:flex;gap:8px;justify-content:center}
+#social .round{width:36px;height:36px}
+#social .ico{width:15px;height:15px}
+
+/* ---------- tetapan ---------- */
+#tabs{position:absolute;left:16px;top:56px;bottom:16px;width:clamp(130px,20vw,180px);display:flex;flex-direction:column;gap:8px}
+#tabs .pill{height:clamp(34px,10vh,42px)}
+#setBody{position:absolute;left:calc(clamp(130px,20vw,180px) + 30px);right:16px;top:56px;bottom:16px;padding:4px 18px;overflow-y:auto}
+.opt{display:flex;justify-content:space-between;align-items:center;gap:12px;min-height:54px;border-bottom:1px solid rgba(255,255,255,.07);padding:6px 0}
+.opt:last-child{border-bottom:none}
+.opt .d{font-size:11.5px;color:var(--grey);margin-top:2px}
+.seg{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+.seg .pill{height:32px;padding:0 13px;font-size:13px}
+.seg .pill.on{background:var(--red);border-color:var(--red);box-shadow:0 0 16px rgba(255,46,77,.5)}
+.sw{width:48px;height:29px;border-radius:999px;background:rgba(255,255,255,.15);position:relative;flex:none;transition:background .2s}
+.sw:after{content:"";position:absolute;left:3px;top:3px;width:23px;height:23px;border-radius:50%;background:#fff;transition:left .2s}
+.sw.on{background:var(--red)}.sw.on:after{left:22px}
+
+/* ---------- modal ---------- */
+#modal{position:fixed;inset:0;z-index:60;background:rgba(0,0,0,.6);display:none;align-items:center;justify-content:center}
+#modal.on{display:flex}
+#modal .glass{width:min(420px,86vw);padding:20px;display:flex;flex-direction:column;gap:10px;background:rgba(20,10,14,.92)}
+#modal h3{font-weight:800;font-size:19px;letter-spacing:-.02em}
+#modal p{font-size:13.5px;line-height:1.45;color:#ddd}
+#modalBtns{display:flex;gap:10px;justify-content:flex-end;margin-top:6px}
+#modalBtns .pill{height:40px}
+
+@media (min-height:600px){#panel{top:50%;bottom:auto;transform:translateY(-50%);width:clamp(300px,30vw,380px)}#panel .sp{min-height:18px}#news{top:50%;transform:translateY(-50%)}}
+@media (max-height:360px){#panel{gap:7px;padding:12px}#news{top:50px}}
+@media (max-width:640px){#news{display:none}#panel{left:12px;right:12px;width:auto}}
+</style>
+</head>
+<body>
+
+<div id="bg"><div id="bgArt"></div><video id="bgVideo" src="media/bg.mp4" muted loop playsinline preload="auto"></video><div id="newsImg"></div><div id="bgShade"></div></div>
+<audio id="music" src="media/music.mp3" loop preload="auto"></audio>
+
+<div id="island"><div class="spin" id="isIco"></div><div class="txt" id="isTxt">Memulakan…</div></div>
+
+<!-- ===== SPLASH ===== -->
+<div class="screen on" id="sSplash">
+  <div class="brand">MALAY<span>CITY</span></div>
+  <div class="sub">Roleplay · Mobile</div>
+  <button class="pill btnred" id="retry" style="width:180px">Cuba lagi</button>
+</div>
+
+<!-- ===== MUAT TURUN ===== -->
+<div class="screen" id="sDl">
+  <svg id="ring" viewBox="0 0 150 150">
+    <circle cx="75" cy="75" r="64" stroke="rgba(255,255,255,.1)" stroke-width="10" fill="none"/>
+    <circle class="arc" id="ringArc" cx="75" cy="75" r="64" stroke="#FF2E4D" stroke-width="10" fill="none" stroke-linecap="round"
+      stroke-dasharray="402.1" stroke-dashoffset="402.1" transform="rotate(-90 75 75)"/>
+    <text id="ringTxt" x="75" y="84" text-anchor="middle" fill="#fff" font-family="Inter,system-ui" font-weight="800" font-size="30">0%</text>
+  </svg>
+  <div class="dlbox">
+    <h2 id="dlTitle">Memuat turun fail game</h2>
+    <div class="pill" id="dlFile"><svg class="ico" viewBox="0 0 24 24" style="width:15px;flex:none"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M14 3v6h6"/></svg><span id="dlName">—</span></div>
+    <div class="bar"><div id="dlBar"></div></div>
+    <div class="row muted"><span id="dlSize">0 MB / 0 MB</span><span id="dlSpeed"></span></div>
+    <div class="muted" style="font-size:12px" id="dlHint">Jangan tutup app semasa muat turun. Muat turun bersambung jika terputus.</div>
+    <div id="dlActions" style="display:none"><button class="pill btnred" id="dlRetry" style="width:170px">Cuba lagi</button></div>
+  </div>
+</div>
+<button class="round" id="muteBtn" style="display:none" aria-label="Bunyi">
+  <svg class="ico" viewBox="0 0 24 24" id="icoSnd"><path d="M11 5 6 9H2v6h4l5 4z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/><path d="M19 5a10 10 0 0 1 0 14"/></svg>
+  <svg class="ico" viewBox="0 0 24 24" id="icoMute" style="display:none"><path d="M11 5 6 9H2v6h4l5 4z"/><path d="m22 9-6 6M16 9l6 6"/></svg>
+</button>
+
+<!-- ===== UTAMA (4A) ===== -->
+<div class="screen" id="sMain">
+  <div id="news">
+    <span class="tag" id="newsTag">BERITA</span>
+    <div id="newsTitle">Selamat datang ke<br><span class="grad">MALAYCITY</span></div>
+    <div id="newsText" class="muted">Server roleplay Malaysia.</div>
+    <div id="newsDots"></div>
+  </div>
+  <div id="panel" class="glass">
+    <div class="brand">MALAY<span>CITY</span></div>
+    <label for="nick">Nama watak</label>
+    <div class="pill" id="nickPill">
+      <svg class="ico" viewBox="0 0 24 24" style="flex:none"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg>
+      <input id="nick" maxlength="20" placeholder="Nama_Watak" autocomplete="off" autocapitalize="off" spellcheck="false">
+    </div>
+    <div class="pill" id="srvPill"><span class="l"><i class="dot y" id="srvDot"></i><span id="srvName">MALAYCITY</span></span><span class="muted" style="font-size:12px" id="srvPing">…</span></div>
+    <div class="sp" style="flex:1"></div>
+    <div id="playRow">
+      <button class="pill btnred" id="btnPlay">MAIN</button>
+      <button class="round" id="btnSet" aria-label="Tetapan"><svg class="ico" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></button>
+    </div>
+    <div id="social"></div>
+  </div>
+</div>
+
+<!-- ===== TETAPAN ===== -->
+<div class="screen" id="sSet">
+  <div id="tabs"></div>
+  <div id="setBody" class="glass"></div>
+</div>
+
+<div id="modal"><div class="glass"><h3 id="mT"></h3><p id="mP"></p><div id="modalBtns"></div></div></div>
+<div class="ver" id="ver"></div>
+
+<script>
+"use strict";
+/* ================= jambatan ================= */
+var N = window.MCNative || null;            // Java (LauncherActivity)
+var $ = function(id){ return document.getElementById(id); };
+var S = { screen:"sSplash", files:null, server:null, news:[], links:{}, settings:{}, muted:false, newsIdx:0, newsTimer:0, check:null };
+
+function call(fn){ try{ if(N && N[fn]) return N[fn].apply(N, [].slice.call(arguments,1)); }catch(e){ console.log("MCNative."+fn+": "+e); } return null; }
+function lsGet(k,d){ try{ var v=localStorage.getItem(k); return v===null?d:v; }catch(e){ return d; } }
+function lsSet(k,v){ try{ localStorage.setItem(k,v); }catch(e){} }
+
+/* ================= pulau ================= */
+function island(kind, text){
+  var ico=$("isIco"), is=$("island");
+  ico.className = kind==="spin" ? "spin" : ("dot" + (kind==="ok"?" g":kind==="warn"?" y":""));
+  $("isTxt").textContent = text;
+  is.classList.remove("err"); void is.offsetWidth;
+  if(kind==="err") is.classList.add("err");
+}
+
+/* ================= skrin ================= */
+function show(id){
+  ["sSplash","sDl","sMain","sSet"].forEach(function(s){ $(s).classList.toggle("on", s===id); });
+  S.screen=id;
+  $("muteBtn").style.display = id==="sDl" ? "flex" : "none";
+  var m=$("music");
+  if(id==="sDl"){ if(!S.muted){ m.play().catch(function(){}); } } else { m.pause(); }
+  $("ver").style.display = id==="sSplash" ? "block" : "none";
+}
+
+/* ================= modal ================= */
+function modal(title, text, btns){
+  $("mT").textContent=title; $("mP").textContent=text;
+  var b=$("modalBtns"); b.innerHTML="";
+  (btns||[{t:"OK"}]).forEach(function(x){
+    var e=document.createElement("button"); e.className="pill"+(x.red?" btnred":""); e.textContent=x.t;
+    e.onclick=function(){ $("modal").classList.remove("on"); if(x.f) x.f(); }; b.appendChild(e);
+  });
+  $("modal").classList.add("on");
+}
+
+/* ================= format ================= */
+function fmtB(b){ if(b>=1073741824) return (b/1073741824).toFixed(2)+" GB"; if(b>=1048576) return (b/1048576).toFixed(b>=104857600?0:1)+" MB"; return Math.max(0,Math.round(b/1024))+" KB"; }
+function fmtT(s){ if(!isFinite(s)||s<=0) return ""; if(s<60) return Math.ceil(s)+" saat lagi"; if(s<3600) return Math.ceil(s/60)+" min lagi"; return (s/3600).toFixed(1)+" jam lagi"; }
+
+/* ================= Java -> JS ================= */
+var MCL = window.MCL = {
+  on: function(ev, d){
+    if(typeof d==="string"){ try{ d=JSON.parse(d); }catch(e){} }
+    var h = H[ev]; if(h) h(d||{});
+  }
+};
+var H = {
+  // keadaan awal: versi, nama, tetapan
+  state: function(d){
+    $("ver").textContent = "v" + (d.version||"?") + " · " + (d.abi||"");
+    if(d.nick) $("nick").value = d.nick;
+    S.settings = d.settings || {};
+  },
+  checking: function(d){ island("spin", d.text || "Menyemak kemas kini…"); },
+  // hasil semakan
+  check: function(d){
+    S.check=d;
+    if(d.server) S.server=d.server;
+    if(d.news) S.news=d.news;
+    if(d.links) S.links=d.links;
+    if(d.status==="app_required"){
+      island("err","Versi app lama");
+      modal("Kemas kini app diperlukan","Versi app ini sudah tidak disokong. Muat turun versi terbaru untuk terus bermain.",
+        [{t:"Keluar",f:function(){call("exitApp");}},{t:"Muat turun",red:true,f:function(){ call("openUrl", d.apkUrl||""); }}]);
+      return;
+    }
+    if(d.status==="need"){
+      S.need=d; startDownload(); return;
+    }
+    if(d.status==="offline" || d.status==="error"){
+      if(d.canPlay){ goMain(d.status==="offline"?"Luar talian - fail sedia ada digunakan":"Semakan gagal - fail sedia ada digunakan","warn"); return; }
+      island("err", d.status==="offline" ? "Tiada sambungan internet" : (d.message||"Pelayan kemas kini gagal"));
+      $("retry").style.display="flex"; return;
+    }
+    goMain();
+    if(d.status==="app_update"){
+      modal("Versi app baru","Versi baru app MALAYCITY tersedia. Kemas kini sekarang?",
+        [{t:"Nanti"},{t:"Kemas kini",red:true,f:function(){ call("openUrl", d.apkUrl||""); }}]);
+    }
+  },
+  progress: function(d){
+    var p = d.total>0 ? d.done/d.total : 0, pct=Math.floor(p*100);
+    $("ringArc").setAttribute("stroke-dashoffset", (402.1*(1-p)).toFixed(1));
+    $("ringTxt").textContent = pct+"%";
+    $("dlBar").style.width = (p*100).toFixed(1)+"%";
+    $("dlSize").textContent = fmtB(d.done)+" / "+fmtB(d.total);
+    $("dlSpeed").textContent = d.speed>0 ? (fmtB(d.speed)+"/s · "+fmtT((d.total-d.done)/d.speed)) : "";
+    if(d.file) $("dlName").textContent = d.file;
+    if(d.phase==="verify"){ island("spin","Menyemak fail · "+pct+"%"); $("dlTitle").textContent="Menyemak fail game"; }
+    else { island("spin","Memuat turun · "+pct+"%"); $("dlTitle").textContent = S.need&&S.need.update ? "Mengemas kini fail game" : "Memuat turun fail game"; }
+  },
+  done: function(d){
+    $("dlActions").style.display="none";
+    island("ok", "Fail game lengkap");
+    setTimeout(function(){ goMain(); }, 700);
+  },
+  dlerror: function(d){
+    island("err", d.message || "Muat turun gagal");
+    $("dlHint").textContent = (d.detail||"Semak sambungan internet.")+" Bahagian yang sudah dimuat turun disimpan.";
+    $("dlActions").style.display="flex";
+  },
+  nospace: function(d){
+    island("err","Ruang storan tidak cukup");
+    modal("Ruang tidak cukup","Perlu "+fmtB(d.need)+" tetapi hanya "+fmtB(d.free)+" kosong. Kosongkan ruang dan cuba lagi.",
+      [{t:"Keluar",f:function(){call("exitApp");}},{t:"Cuba lagi",red:true,f:function(){ startDownload(); }}]);
+  },
+  query: function(d){
+    if(d.online){
+      $("srvDot").className="dot g";
+      $("srvName").textContent = S.server&&S.server.name ? S.server.name : (d.hostname||"MALAYCITY");
+      $("srvPing").textContent = d.ping+" ms";
+      if(S.screen==="sMain") island("ok", "Dalam talian · "+d.players+" / "+d.max);
+    } else {
+      $("srvDot").className="dot";
+      $("srvPing").textContent="luar talian";
+      if(S.screen==="sMain") island("err","Server tidak dapat dihubungi");
+    }
+  },
+  settings: function(d){ S.settings=d||{}; if(S.screen==="sSet") renderTab(S.tab); },
+  back: function(){
+    if($("modal").classList.contains("on")){ $("modal").classList.remove("on"); return; }
+    if(S.screen==="sSet"){ goMain(); return; }
+    if(S.screen==="sDl"){ modal("Henti muat turun?","Muat turun akan disambung bila buka app semula.",[{t:"Teruskan"},{t:"Keluar",red:true,f:function(){call("exitApp");}}]); return; }
+    call("exitApp");
+  },
+  playError: function(d){ island("err", d.message||"Tidak dapat mula"); $("btnPlay").disabled=false; }
+};
+
+/* ================= aliran ================= */
+function startDownload(){
+  show("sDl"); $("dlActions").style.display="none";
+  $("dlHint").textContent="Jangan tutup app semasa muat turun. Muat turun bersambung jika terputus.";
+  island("spin","Menyediakan muat turun…");
+  call("download");
+}
+function goMain(msg, kind){
+  show("sMain");
+  renderNews(); renderSocial();
+  if(S.server && S.server.name) $("srvName").textContent=S.server.name;
+  island(kind||"spin", msg || "Menghubungi server…");
+  call("query");
+  clearInterval(S.qTimer); S.qTimer=setInterval(function(){ if(S.screen==="sMain") call("query"); }, 15000);
+}
+
+/* ---- berita ---- */
+function renderNews(){
+  var n=S.news&&S.news.length?S.news:[{tag:"BERITA",title:"Selamat datang ke",title2:"MALAYCITY",text:"Server roleplay Malaysia."}];
+  var dots=$("newsDots"); dots.innerHTML="";
+  n.forEach(function(_,i){ var e=document.createElement("i"); e.onclick=function(){ setNews(i); }; dots.appendChild(e); });
+  S.newsList=n; setNews(0);
+  clearInterval(S.newsTimer);
+  if(n.length>1) S.newsTimer=setInterval(function(){ setNews((S.newsIdx+1)%S.newsList.length); }, 7000);
+}
+function setNews(i){
+  var n=S.newsList[i]; S.newsIdx=i;
+  $("newsTag").textContent=n.tag||"BERITA";
+  var t=$("newsTitle"); t.textContent=n.title||"";
+  if(n.title2){ t.appendChild(document.createElement("br")); var s=document.createElement("span"); s.className="grad"; s.textContent=n.title2; t.appendChild(s); }
+  $("newsText").textContent=n.text||"";
+  [].forEach.call($("newsDots").children,function(e,j){ e.className=j===i?"on":""; });
+  var img=$("newsImg");
+  if(n.image){ img.style.backgroundImage="url('"+String(n.image).replace(/'/g,"%27")+"')"; img.classList.add("on"); } else img.classList.remove("on");
+}
+
+/* ---- sosial ---- */
+var ICO={
+  discord:'<path d="M8 13a1 1 0 1 0 0-.01M16 13a1 1 0 1 0 0-.01"/><path d="M7 17c-2 0-4-1-4-1 0-6 2-10 2-10s2-1 4-1l1 2h4l1-2c2 0 4 1 4 1s2 4 2 10c0 0-2 1-4 1l-1-2"/>',
+  tiktok:'<path d="M9 12a4 4 0 1 0 4 4V4c1 2 3 3 5 3"/>',
+  website:'<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/>',
+  youtube:'<rect x="2" y="6" width="20" height="12" rx="4"/><path d="m10 9 5 3-5 3z"/>',
+  facebook:'<path d="M15 3h-2a4 4 0 0 0-4 4v3H7v4h2v7h4v-7h3l1-4h-4V7a1 1 0 0 1 1-1h2z"/>',
+  whatsapp:'<path d="M3 21l1.6-4.6A9 9 0 1 1 8 19.5z"/>'
+};
+function renderSocial(){
+  var w=$("social"); w.innerHTML="";
+  var l=S.links||{};
+  Object.keys(ICO).forEach(function(k){
+    if(!l[k]) return;
+    var b=document.createElement("button"); b.className="round"; b.setAttribute("aria-label",k);
+    b.innerHTML='<svg class="ico" viewBox="0 0 24 24">'+ICO[k]+'</svg>';
+    b.onclick=function(){ call("openUrl", l[k]); }; w.appendChild(b);
+  });
+}
+
+/* ---- main ---- */
+var NICK_RE=/^[A-Za-z0-9_\[\]().$@=]{3,20}$/;
+function play(){
+  var nick=$("nick").value.trim();
+  if(!NICK_RE.test(nick)){
+    var p=$("nickPill"); p.classList.remove("bad"); void p.offsetWidth; p.classList.add("bad");
+    island("err","Nama 3-20 aksara: huruf, nombor, _ (cth: Ali_Bakar)"); return;
+  }
+  $("btnPlay").disabled=true;
+  island("spin","Memulakan game…");
+  call("play", nick);
+  if(!N) setTimeout(function(){ $("btnPlay").disabled=false; island("ok","(demo) game dimulakan"); },800);
+}
+
+/* ================= tetapan ================= */
+// k = kunci (Java tukar ke settings.ini), t = jenis
+var TABS=[
+  {id:"g",name:"Grafik",opts:[
+    {k:"fpsLimit",n:"Had FPS",d:"Lebih tinggi = lebih licin, lebih panas",t:"seg",v:[30,60,90,120]},
+    {k:"fpsCounter",n:"Papar FPS",t:"sw"},
+    {k:"cutout",n:"Skrin bertakuk (notch)",d:"Guna ruang kamera depan",t:"sw"},
+    {k:"radarRect",n:"Radar segi empat",t:"sw"}]},
+  {id:"c",name:"Chat",opts:[
+    {k:"chatLines",n:"Bilangan baris chat",t:"seg",v:[4,6,8,10,12]},
+    {k:"androidKeyboard",n:"Papan kekunci Android",d:"Guna papan kekunci telefon",t:"sw"}]},
+  {id:"k",name:"Kawalan",opts:[
+    {k:"autoAim",n:"Bantuan bidikan (auto-aim)",t:"sw"},
+    {k:"firstPerson",n:"Butang pandangan orang pertama",t:"sw"},
+    {k:"hpText",n:"Teks nyawa & perisai",t:"sw"}]},
+  {id:"s",name:"Suara",opts:[
+    {k:"voice",n:"Voice chat",t:"sw"},
+    {k:"music",n:"Muzik launcher",t:"sw",local:true}]},
+  {id:"f",name:"Fail game",opts:[
+    {n:"Semak & baiki fail",d:"Semak semua fail dan muat turun semula yang rosak",t:"btn",f:function(){ S.need={update:true}; show("sDl"); island("spin","Menyemak fail…"); call("verifyAll"); }},
+    {n:"Folder fail",d:"",t:"info",k:"dataDir"},
+    {n:"Versi app",t:"info",k:"version"}]}
+];
+function renderTabs(){
+  var t=$("tabs"); t.innerHTML="";
+  TABS.forEach(function(x){ var b=document.createElement("button"); b.className="pill"+(S.tab===x.id?" act":""); b.textContent=x.name; b.onclick=function(){ renderTab(x.id); }; t.appendChild(b); });
+  var sp=document.createElement("div"); sp.style.flex="1"; t.appendChild(sp);
+  var bk=document.createElement("button"); bk.className="pill"; bk.style.justifyContent="center"; bk.textContent="‹ Kembali"; bk.onclick=function(){ goMain(); }; t.appendChild(bk);
+}
+function setVal(k,v,local){
+  S.settings[k]=v;
+  if(local){ if(k==="music"){ lsSet("mc_music", v?"1":"0"); S.muted=!v; } }
+  else call("setSetting", k, String(v));
+  renderTab(S.tab);
+}
+function renderTab(id){
+  S.tab=id; renderTabs();
+  var tab=TABS.filter(function(x){return x.id===id;})[0], body=$("setBody"); body.innerHTML="";
+  tab.opts.forEach(function(o){
+    var r=document.createElement("div"); r.className="opt";
+    var l=document.createElement("div"); l.textContent=o.n;
+    if(o.d){ var d=document.createElement("div"); d.className="d"; d.textContent=o.d; l.appendChild(d); }
+    r.appendChild(l);
+    var cur = o.local ? (o.k==="music" ? !S.muted : null) : S.settings[o.k];
+    if(o.t==="sw"){
+      var s=document.createElement("button"); s.className="sw"+(cur===true||cur==="true"?" on":"");
+      s.onclick=function(){ setVal(o.k, !(cur===true||cur==="true"), o.local); }; r.appendChild(s);
+    } else if(o.t==="seg"){
+      var g=document.createElement("div"); g.className="seg";
+      o.v.forEach(function(v){ var b=document.createElement("button"); b.className="pill"+(String(cur)===String(v)?" on":""); b.textContent=v; b.onclick=function(){ setVal(o.k,v); }; g.appendChild(b); });
+      r.appendChild(g);
+    } else if(o.t==="btn"){
+      var b=document.createElement("button"); b.className="pill"; b.style.height="34px"; b.textContent="Semak"; b.onclick=o.f; r.appendChild(b);
+    } else if(o.t==="info"){
+      var i=document.createElement("div"); i.className="muted"; i.style.cssText="font-size:12px;text-align:right;word-break:break-all;max-width:60%";
+      i.textContent=S.settings[o.k]||"—"; r.appendChild(i);
+    }
+    body.appendChild(r);
+  });
+}
+
+/* ================= butang ================= */
+$("btnPlay").onclick=play;
+$("nick").addEventListener("keydown",function(e){ if(e.key==="Enter"){ e.target.blur(); } });
+$("nick").addEventListener("change",function(){ call("setNick", $("nick").value.trim()); });
+$("btnSet").onclick=function(){ show("sSet"); island("ok","Tetapan"); var r=call("getSettings"); if(r){ try{ S.settings=JSON.parse(r); }catch(e){} } renderTab(S.tab||"g"); };
+$("retry").onclick=function(){ $("retry").style.display="none"; island("spin","Menyemak kemas kini…"); call("check"); };
+$("dlRetry").onclick=startDownload;
+$("muteBtn").onclick=function(){ S.muted=!S.muted; lsSet("mc_music", S.muted?"0":"1"); applyMute(); };
+function applyMute(){
+  var m=$("music"); $("icoSnd").style.display=S.muted?"none":"block"; $("icoMute").style.display=S.muted?"block":"none";
+  if(S.muted) m.pause(); else if(S.screen==="sDl") m.play().catch(function(){});
+}
+
+/* ================= mula ================= */
+(function init(){
+  S.muted = lsGet("mc_music","1")==="0"; applyMute();
+  var v=$("bgVideo");
+  v.addEventListener("canplay",function(){ v.classList.add("on"); v.play().catch(function(){}); });
+  v.addEventListener("error",function(){ v.remove(); });       // tiada media/bg.mp4 -> latar bergerak sahaja
+  $("music").addEventListener("error",function(){ $("music").removeAttribute("src"); });
+  document.addEventListener("contextmenu",function(e){ e.preventDefault(); });
+
+  if(N){ call("ready"); return; }
+
+  /* ---------- mod demo (pelayar PC, tiada Java) ---------- */
+  H.state({version:"1.0.0 demo",abi:"arm64-v8a",nick:"Ali_Bakar",settings:{fpsLimit:60,fpsCounter:false,cutout:false,radarRect:false,chatLines:6,androidKeyboard:false,autoAim:false,firstPerson:true,hpText:false,voice:true,dataDir:"/storage/emulated/0/Android/data/com.malaycity.mobile/files",version:"1.0.0"}});
+  island("spin","Menyemak kemas kini…");
+  var demo = (location.hash||"").replace("#","");
+  setTimeout(function(){
+    var base={server:{name:"MALAYCITY RP"},links:{discord:"#",tiktok:"#",website:"#"},
+      news:[{tag:"BERITA",title:"Kemas kini Oktober:",title2:"Panggung wayang dibuka",text:"Tonton video bersama pemain lain di pawagam bandar. Baju baharu di almari."},
+            {tag:"ACARA",title:"Hujung minggu ini:",title2:"Konvoi Faggio",text:"Berkumpul di Grove Street jam 9 malam."}]};
+    if(demo==="main"||demo==="set"){ base.status="ok"; H.check(base); setTimeout(function(){ H.query({online:true,players:128,max:500,ping:48}); if(demo==="set") $("btnSet").onclick(); },300); return; }
+    if(demo==="offline"){ H.check({status:"offline"}); return; }
+    base.status="need"; H.check(base);
+    var total=2.3*1073741824, done=0;
+    var t=setInterval(function(){ done+=total*0.031; if(demo==="dl"&&done>total*0.47){ done=total*0.47; clearInterval(t); }
+      if(done>=total){ clearInterval(t); H.done({}); setTimeout(function(){ H.query({online:true,players:128,max:500,ping:48}); },900); return; }
+      H.progress({done:done,total:total,speed:6.4*1048576,file:"texdb/gta3/gta3.etc.dat"}); },120);
+  },900);
+})();
+</script>
+</body>
+</html>

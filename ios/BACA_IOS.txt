@@ -1,0 +1,145 @@
+MALAYCITY iOS — LAUNCHER (Fasa 1)
+Bina IPA di GitHub, pasang di iPhone tanpa Mac.                     27 Okt 2026
+=======================================================================================
+
+APA YANG SUDAH SIAP (Fasa 1 sahaja)
+  ios/                              projek Xcode (dijana XcodeGen, .xcodeproj tak masuk repo)
+    project.yml                     spec XcodeGen
+    McLauncher-Info.plist           landscape, skrin penuh, file sharing
+    McLauncher/AppDelegate.swift    titik masuk
+    McLauncher/LauncherViewController.swift  WKWebView + jambatan MCNative
+    McLauncher/McConfig.swift       tetapan tetap (URL manifest, folder data)
+    McLauncher/McDownloader.swift   muat turun bersambung + MD5 (padanan Java)
+    McLauncher/McSettings.swift     settings.ini (padanan Java, tiada ini4j)
+    McLauncher/McIni.swift          pembaca INI sendiri
+    McLauncher/McQuery.swift        pertanyaan server SA-MP (UDP 'i')
+    McLauncher/McGPU.swift          kesan jenis tekstur GPU
+    McLauncher/Assets.xcassets/     ikon app (1024x1024)
+  .github/workflows/ios.yml         bina IPA tak bersign pada macOS GitHub
+
+  UI = HTML YANG SAMA dgn Android (mobile/app/src/main/assets/launcher/index.html).
+  Ia disalin ke ios/launcher/ masa `xcodegen generate`, jadi tak perlu tulis UI baru
+  dan tak akan terpesong dari versi Android.
+
+APA YANG BELUM (Fasa 3-5, lihat NOTA_PROJEK.txt:3688-3701)
+  Enjin GTA SA (libGTASA ELF arm64 -> Mach-O iOS + lapisan ganti Android).
+  Tekan MAIN sekarang -> launcher sahkan server & simpan nama, kemudian papar mesej
+  "Enjin GTA SA untuk iOS belum sedia". Itu memang dijangka.
+
+=======================================================================================
+LANGKAH 1 — MASUKKAN FOLDER ios/ KE REPO GITHUB
+=======================================================================================
+Repo perlu di GitHub (percuma untuk repo awam; runner macOS percuma untuk repo awam).
+Kalau belum ada repo:
+  1. Buat repo baru di github.com (cth "malaycity"), JANGAN tick "Add a README".
+  2. Di folder D:\MALAYCITY_FULL, jalankan (ganti URL dgn repo kau):
+
+       git init
+       git add .
+       git commit -m "iOS launcher Fasa 1"
+       git branch -M main
+       git remote add origin https://github.com/NAMA/repo.git
+       git push -u origin main
+
+  Kalau repo sudah ada: git add . ; git commit -m "iOS launcher Fasa 1" ; git push
+
+  PENTING: fail .github/workflows/ios.yml MESTI ikut serta. Tanpa ia, tiada build.
+
+=======================================================================================
+LANGKAH 2 — JALANKAN BUILD
+=======================================================================================
+  1. Buka repo di GitHub -> tab "Actions".
+  2. Kiri: "Bina IPA iOS" -> butang "Run workflow" -> "Run workflow".
+  3. Tunggu ~10-20 minit (kali pertama lambat: install xcodegen + bina).
+  4. Bila selesai (tanda hijau), klik run itu -> bawah, "Artifacts" ->
+     muat turun "McLauncher-ipa" (fail zip berisi McLauncher.ipa).
+
+  Kalau tanda MERAH: klik run -> job "build" -> step yg merah -> hantar teks ralat itu.
+  Workflow ini GAGAL SENGAJA kalau launcher/index.html tiada dlm bundle - itu cek
+  bahawa HTML benar-benar masuk ke dlm app.
+
+=======================================================================================
+LANGKAH 3 — PASANG DI IPHONE (Sideloadly + Apple ID percuma)
+=======================================================================================
+  1. Di PC (Windows): pasang Sideloadly dari https://sideloadly.io
+     dan iTunes dari apple.com (perlu untuk driver peranti).
+  2. Sambung iPhone 13 Pro dgn kabel. Tekan "Trust" pada iPhone.
+  3. Buka Sideloadly:
+       - IPA: pilih McLauncher.ipa
+       - Apple ID: e-mel Apple ID kau (PERCUMA, tak perlu bayar USD99)
+       - Tekan Start, masukkan kata laluan Apple ID.
+  4. Di iPhone: Settings -> General -> VPN & Device Management ->
+     pilih profil "Apple Development: <e-mel kau>" -> Trust.
+  5. iPhone perlu "Developer Mode":
+       Settings -> Privacy & Security -> Developer Mode -> On -> restart.
+       (Pilihan ini hanya muncul selepas app pertama dipasang.)
+  6. Buka app MALAYCITY. Launcher patut muncul (landscape, pil hitam di atas).
+
+  HAD APPLE ID PERCUMA (sebab ini bukan TestFlight):
+    - app tamat selepas 7 hari -> pasang semula dgn Sideloadly
+    - maksimum 3 app pada satu masa
+    - maksimum 10 app ID baharu setiap 7 hari
+
+=======================================================================================
+LANGKAH 4 — APA YANG PATUT KAU NAMPAK
+=======================================================================================
+  - Skrin splash -> "Menyemak kemas kini…" -> skrin utama (berita, butang MAIN).
+  - Teks versi kecil: "v1.0.0 (1) · 64-bit".
+  - Kad server: titik hijau + "Nama Server · X ms" bila server hidup.
+    Ini UJI pertanyaan UDP SA-MP dari iOS - laluan rangkaian yang SAMA diperlukan
+    oleh client nanti.
+  - Butang tetapan: tab Grafik/Chat/Kawalan/Suara/Fail game. Setiap tukar ditulis ke
+    Documents/SAMP/settings.ini dan kekal selepas app dibuka semula.
+  - Tekan MAIN: mesej "Enjin GTA SA untuk iOS belum sedia (Fasa 3-5)".
+    Nama disimpan, settings.ini ditulis. Inilah sempadan Fasa 1.
+
+  Muat turun fail game (butang bila manifest kata "need") BELUM disahkan terhadap
+  server sebenar - McDownloader iOS ditulis ikut Java tapi belum diuji hujung-ke-hujung.
+  Kalau bermasalah, hantar log (lihat bawah).
+
+=======================================================================================
+CARA AMBIL LOG (kalau app tersangkut / crash)
+=======================================================================================
+  Tanpa Mac:
+    1. iPhone -> Settings -> Privacy & Security -> Analytics & Improvements ->
+       Analytics Data -> cari "McLauncher..." -> kongsi fail.
+    2. Atau di PC: pasang "Apple Devices" / iTunes -> lihat log peranti.
+  Log app ini bertanda: [MC], [MC_DL], [MC_GPU].
+  Web Inspector (kalau nanti ada Mac): Safari -> Develop -> iPhone -> halaman.
+
+=======================================================================================
+PERKARA YANG PERLU DIINGAT
+=======================================================================================
+  - ios/launcher/ ialah SALINAN. Jangan edit di situ: edit
+    mobile/app/src/main/assets/launcher/index.html, kemudian build semula
+    (preGenCommand menyalin semula setiap kali xcodegen generate).
+  - Bundle ID: com.malaycity.mobile.ios. Kalau App ID ini sudah dipakai pada akaun
+    Apple kau, tukar dlm ios/project.yml (PRODUCT_BUNDLE_IDENTIFIER).
+  - Nama app di skrin: MALAYCITY (CFBundleDisplayName dlm plist).
+  - Manifest diambil dari https://malaycity.com/mobile/manifest.json
+    (McConfig.manifestURL). Host/port server TIDAK didedahkan ke HTML - sama
+    seperti Android (LauncherActivity.java).
+  - Sasaran minimum iOS 17.0 (iPhone 13 Pro kau iOS 26 -> OK).
+
+=======================================================================================
+UJIAN (boleh jalan di Windows, tanpa Mac)
+=======================================================================================
+  python d:\MALAYCITY_FULL\ios\uji_semua.py
+
+  Menjalankan 4 suite: jambatan JS<->Swift, McIni (settings.ini), McQuery (paket SA-MP),
+  check() (status manifest). Semua LULUS pada 27 Okt 2026.
+
+  Ini mengesahkan LOGIK (logik Swift diport semula ke Python dan dibandingkan dgn
+  Java/HTML asal). Ia TIDAK mengesahkan sintaks Swift - itu tugas build Actions.
+
+FAKTA YANG DISAHKAN UJIAN
+  - 11/11 arahan call() dlm index.html ada padanan dlm shim window.MCNative,
+    dan 11/11 dikendalikan (getSettings oleh shim sendiri, 10 lagi oleh Swift).
+  - 11/11 event dari Swift ada handler dlm HTML (tiada event "yatim").
+  - McIni: komen & susunan settings.ini asal kekal; host/port/password dibuang
+    oleh writeClient; nama tag klan [MC]Ali_Bakar ditulis apa adanya.
+  - McQuery: 11-bait permintaan (SAMP + ip + port LE + 'i'), hurai players/max/
+    hostname/password; nama UTF-8 OK; server senyap -> online=false tanpa crash.
+  - check(): 6 status (ok/need/app_required/app_update/offline/error) sepadan
+    dgn McDownloader.java; host/port/password TIDAK dihantar ke HTML.
+

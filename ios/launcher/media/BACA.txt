@@ -1,0 +1,4 @@
+Letak fail sendiri di sini (nama TEPAT):
+  bg.mp4     video latar launcher (H.264 MP4, 1280x720, gelung, tanpa bunyi pun boleh)
+  music.mp3  muzik semasa muat turun (pemain boleh senyapkan)
+Tiada fail = latar gelap bergerak. Saiz APK bertambah ikut saiz fail.

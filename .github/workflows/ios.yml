@@ -1,0 +1,100 @@
+name: Bina IPA iOS
+
+# Bina IPA TAK BERSIGN pada runner macOS GitHub (percuma untuk repo awam).
+# Tiada Mac & tiada akaun Apple Developer diperlukan:
+#   1. Actions jalan -> artifact "McLauncher-ipa" (fail .ipa)
+#   2. Muat turun .ipa -> Sideloadly/eSign + Apple ID percuma -> pasang di iPhone
+#      (tamat 7 hari, maks 3 app, perlu Developer Mode dihidupkan)
+#   3. Kemudian (pilihan): Apple Developer USD99 -> TestFlight
+#
+# Cara jalan: tab Actions -> "Bina IPA iOS" -> Run workflow.
+# Atau automatik bila fail dlm ios/ berubah.
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'ios/**'
+      - '.github/workflows/ios.yml'
+      - 'mobile/app/src/main/assets/launcher/**'
+
+jobs:
+  build:
+    # macos-latest = macOS 26 arm64 + Xcode 26/27 (runner-images README).
+    # iOS 17.0 deployment target -> boleh pasang di iOS 17 ke atas (iPhone 13 Pro iOS 26 OK).
+    runs-on: macos-latest
+    timeout-minutes: 40
+    steps:
+      - name: Ambil source
+        uses: actions/checkout@v4
+
+      - name: Pilih Xcode
+        run: |
+          sudo xcode-select -s /Applications/Xcode.app
+          xcodebuild -version
+          swift --version
+
+      - name: Pasang XcodeGen
+        run: |
+          brew install xcodegen
+          xcodegen --version
+
+      - name: Jana projek Xcode
+        working-directory: ios
+        run: |
+          xcodegen generate
+          ls -la
+          ls -la McLauncher.xcodeproj
+
+      - name: Semak HTML launcher wujud
+        working-directory: ios
+        run: |
+          # HTML launcher ialah UI sebenar app. Kalau hilang, build tak bermakna.
+          test -f launcher/index.html || { echo "::error::ios/launcher/index.html tiada"; exit 1; }
+          echo "OK: index.html ada ($(wc -c < launcher/index.html) bait)"
+
+      - name: Bina .app (tanpa tandatangan)
+        working-directory: ios
+        run: |
+          set -o pipefail
+          xcodebuild \
+            -project McLauncher.xcodeproj \
+            -scheme McLauncher \
+            -configuration Release \
+            -sdk iphoneos \
+            -destination 'generic/platform=iOS' \
+            -derivedDataPath build \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY="" \
+            build
+
+      - name: Bungkus jadi .ipa
+        working-directory: ios
+        run: |
+          set -e
+          APP="build/Build/Products/Release-iphoneos/McLauncher.app"
+          test -d "$APP" || { echo "::error::McLauncher.app tiada"; exit 1; }
+          # sahkan HTML launcher benar-benar dlm bundle
+          test -f "$APP/launcher/index.html" || { echo "::error::launcher/index.html tiada dlm .app"; exit 1; }
+          rm -rf Payload McLauncher.ipa
+          mkdir -p Payload
+          cp -R "$APP" Payload/
+          zip -qry McLauncher.ipa Payload
+          shasum -a 256 McLauncher.ipa
+          du -h McLauncher.ipa
+
+      - name: Muat naik artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: McLauncher-ipa
+          path: ios/McLauncher.ipa
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Log bila gagal
+        if: failure()
+        working-directory: ios
+        run: |
+          echo "=== Cari log bina ==="
+          find build -name "*.xcactivitylog" -o -name "*.log" 2>/dev/null | head -20
