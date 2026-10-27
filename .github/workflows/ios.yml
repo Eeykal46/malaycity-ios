@@ -72,17 +72,31 @@ jobs:
       - name: Sahkan shim dikompil ke binari
         working-directory: ios
         run: |
-          # Build pertama GAGAL SENYAP: mc_ios_shim.mm tidak dikompil (type: group),
-          # jadi simbol AAsset/__android_log/slCreate tiada dlm binari.
-          # Langkah ini memastikan ia TIDAK berulang.
           BIN="build/Build/Products/Release-iphoneos/McLauncher.app/McLauncher"
           test -f "$BIN" || { echo "::error::binari tiada"; exit 1; }
+
+          echo "=== simbol shim dlm binari (nm) ==="
+          nm -gU "$BIN" 2>/dev/null | grep -E 'AAsset|android_log|slCreate|system_property|SL_IID' || echo "(nm: tiada)"
+          echo "=== strings ==="
+          strings "$BIN" | grep -E 'AAsset|android_log|slCreate|system_property' || echo "(strings: tiada)"
+          echo "=== objek shim dihasilkan? ==="
+          find build -name 'mc_ios_shim.o' -exec ls -la {} \; 2>/dev/null || echo "(tiada .o)"
+
+          # Semak .o (bukan binari akhir) - itu membuktikan shim dikompil betul
+          OBJ=$(find build -name 'mc_ios_shim.o' | head -1)
+          if [ -z "$OBJ" ]; then
+            echo "::error::mc_ios_shim.o TIADA - fail tidak dikompil langsung"
+            exit 1
+          fi
+          echo "=== simbol dlm .o ==="
+          nm "$OBJ" | grep -E ' T | t ' | head -20
+
           gagal=0
           for sym in AAssetManager_open __android_log_print slCreateEngine __system_property_get; do
-            if strings "$BIN" | grep -q "$sym"; then
-              echo "OK   $sym"
+            if nm "$OBJ" 2>/dev/null | grep -q "$sym"; then
+              echo "OK   $sym (dlm .o)"
             else
-              echo "::error::SIMBOL HILANG: $sym (shim tidak dikompil?)"
+              echo "::error::SIMBOL HILANG dlm .o: $sym"
               gagal=1
             fi
           done
