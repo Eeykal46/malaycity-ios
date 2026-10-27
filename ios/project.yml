@@ -48,6 +48,12 @@ targets:
         IPHONEOS_DEPLOYMENT_TARGET: "17.0"
         CLANG_CXX_LANGUAGE_STANDARD: "c++20"
         CLANG_ENABLE_OBJC_ARC: YES
+        # Shim di bawah mesti kelihatan kepada enjin (dlopen/dlsym) semasa
+        # enjin dimuatkan, jadi jangan sembunyikan simbol.
+        OTHER_CFLAGS: "$(inherited) -fvisibility=default"
+        OTHER_CPLUSPLUSFLAGS: "$(inherited) -fvisibility=default"
+        # Buang amaran "unused variable" untuk stub audio sementara.
+        GCC_WARN_UNUSED_VARIABLE: NO
     dependencies:
       # UJIAN KRITIKAL: adakah OpenGL ES masih berfungsi di iOS 26?
       # GLProbe.swift guna EAGLContext + shader + render sebenar.

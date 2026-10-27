@@ -28,6 +28,12 @@
 
 #include "mc_ios_shim.h"
 
+// PENTING: semua simbol ini mesti `extern "C"` supaya TIDAK di-mangle oleh C++.
+// Fail .mm dikompil sebagai C++ - tanpa extern "C", `AAsset_read` menjadi
+// `__Z11AAsset_readPvS_` dan enjin (yang minta nama C) TIDAK dapat jumpa.
+// Inilah sebab build pertama "berjaya" tetapi simbol tiada dlm binari.
+extern "C" {
+
 static char g_dataRoot[1024] = {0};
 static os_log_t g_log = NULL;
 
@@ -241,4 +247,14 @@ int slCreateEngine(void** pEngine, int numOptions, const void* pOptions,
     if (pEngine) *pEngine = &g_engineObj;
     return 0;   // SL_RESULT_SUCCESS
 }
+
+
+} // extern "C"
+
+// =====================================================================
+//  6. Kawalan paparan (Android: ANativeWindow -> iOS: UIView/CAEAGLLayer)
+// =====================================================================
+// libGTASA tidak import ANativeWindow_* mengikut ios/alat/senarai_shim.py,
+// jadi kita tidak perlu shim itu sekarang. Jika enjin minta kemudian,
+// tambah di sini dan jalankan semula uji_shim.py.
 
