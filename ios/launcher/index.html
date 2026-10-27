@@ -386,18 +386,6 @@ var H = {
       ? (q.hostname||"server") + " · " + q.players + "/" + q.max + " · " + q.ping + " ms"
       : "luar talian";
   },
-  glProbe: function(d){
-    // Hasil ujian GLES disimpan; dipapar dlm Tetapan -> Diagnostik.
-    S.gl = d||{};
-    if(S.screen==="sSet" && S.tab==="d") renderTab("d");
-    island(d.render ? "ok" : "err",
-           d.render ? "GLES BERFUNGSI" : "GLES GAGAL");
-  },
-  loadProbe: function(d){
-    // Hasil ujian MUAT ENJIN (ELF vs Mach-O).
-    S.load = d||{};
-    if(S.screen==="sSet" && S.tab==="d") renderTab("d");
-  },
   huskProbe: function(d){
     // Hasil ujian TRANSLATION LAYER (Husk).
     S.husk = d||{};
@@ -498,16 +486,12 @@ var TABS=[
     {n:"Folder fail",d:"",t:"info",k:"dataDir"},
     {n:"Versi app",t:"info",k:"version"}]},
   {id:"d",name:"Diagnostik",opts:[
-    {n:"Ujian OpenGL ES",d:"Adakah iOS masih boleh render GLES?",t:"din",k:"__gl"},
-    {n:"Muat enjin (ELF)",d:"Boleh tak iOS muatkan libGTASA.so?",t:"din2",k:"__load"},
-    {n:"Salin semua laporan",d:"Salin GLES + muat enjin",t:"btn2",k:"copy"},
-    {n:"Butiran penuh",d:"",t:"pre",k:"__glreport"},
-    {n:"Laporan muat enjin",d:"",t:"pre2",k:"__loadreport"},
+    {n:"Translation layer",d:"Husk dilink & berfungsi?",t:"din3",k:"__husk"},
+    {n:"Salin laporan",d:"Salin laporan Husk",t:"btn2",k:"copy"},
+    {n:"Laporan Husk",d:"",t:"pre3",k:"__huskreport"},
     {n:"Server",d:"",t:"info",k:"__srv"},
     {n:"Platform",d:"",t:"info",k:"__plat"},
-    {n:"Translation layer",d:"Husk dilink?",t:"din3",k:"__husk"},
-    {n:"Laporan Husk",d:"",t:"pre3",k:"__huskreport"},
-    {n:"Fail laporan",d:"gl_report.txt dlm app Files",t:"info",k:"dataDir"}]}
+    {n:"Fail laporan",d:"husk_report.txt dlm app Files",t:"info",k:"dataDir"}]}
 ];
 function renderTabs(){
   var t=$("tabs"); t.innerHTML="";
@@ -529,8 +513,6 @@ function renderTab(id){
     ? ((q0.hostname||"server") + " · " + q0.players + "/" + q0.max + " · " + q0.ping + " ms")
     : "luar talian";
   S.settings.__plat = (S.platform||"iOS") + (S.ios && S.ios.engine===false ? " · enjin belum ada" : "");
-  S.settings.__glreport = (S.gl && S.gl.report) || "";
-  S.settings.__loadreport = (S.load && S.load.report) || "";
   S.settings.__huskreport = (S.husk && S.husk.report) || "";
   S.settings.__husk = (S.husk && S.husk.ada) ? "dilink" : "tidak";
   var tab=TABS.filter(function(x){return x.id===id;})[0], body=$("setBody"); body.innerHTML="";
@@ -610,10 +592,9 @@ function renderTab(id){
       var b2=document.createElement("button"); b2.className="pill"; b2.style.height="34px";
       b2.textContent="Salin";
       b2.onclick=function(){
-        var gl=(S.gl&&S.gl.report)?S.gl.report:"(GLES: belum dijalankan)";
-        var ld=(S.load&&S.load.report)?S.load.report:"(MUAT ENJIN: belum dijalankan)";
+        var hk=(S.husk&&S.husk.report)?S.husk.report:"(Husk: belum dijalankan)";
         var plat="PLATFORM: "+(S.platform||"?")+"  server: "+(S.settings.__srv||"?");
-        salin(plat+"\n\n"+gl+"\n"+ld);
+        salin(plat+"\n\n"+hk);
       };
       r.appendChild(b2);
     } else if(o.t==="pre"){

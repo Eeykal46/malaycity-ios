@@ -29,8 +29,6 @@ final class LauncherViewController: UIViewController {
 
     /// Hasil ujian GLES. Dijalankan SEKALI, dihantar bila HTML sudah bersedia.
     /// (Dulu dihantar sejurus selepas dijalankan -> HTML belum ada handler -> hilang.)
-    private var glResult: GLProbe.Result?
-    private var loadResult: MCLoadProbe.Result?
     private var huskLaporan = ""
     private var htmlReady = false
     private let glLock = NSLock()
@@ -187,22 +185,9 @@ final class LauncherViewController: UIViewController {
             }
             NSLog("[MC] GPU=%@ data=%@", McGPU.describe, McConfig.dataRoot.path)
 
-            // UJIAN GLES: jawab soalan paling kritikal projek (lihat GLProbe.swift).
-            // SIMPAN hasilnya - jangan emit sekarang, HTML belum bersedia.
-            let gl = GLProbe.run()
-            NSLog("%@", GLProbe.report(gl))
-            self.glLock.lock(); self.glResult = gl; self.glLock.unlock()
-            self.simpanLaporanGl(gl)
-
-            // UJIAN PENENTU: boleh tak iOS muatkan enjin ELF?
-            let ld = MCLoadProbe.run()
-            NSLog("%@", ld.report)
-            self.glLock.lock(); self.loadResult = ld; self.glLock.unlock()
-
-            // UJIAN HUSK: adakah translation layer benar-benar dilink?
+            // UJIAN HUSK: adakah translation layer benar-benar dilink dan berfungsi?
+            // (Ujian GLES & ELF dibuang - Husk yang jalankan enjin, bukan kita.)
             self.ujianHusk()
-
-            self.sendGlProbeIfReady()
 
             let d = McDownloader(dataRoot: McConfig.dataRoot,
                                  privateDir: McConfig.privateRoot,
@@ -226,17 +211,15 @@ final class LauncherViewController: UIViewController {
         return downloader()
     }
 
-    /// Simpan laporan GLES ke Documents/gl_report.txt.
-    /// Documents boleh dibuka dalam app Files (UIFileSharingEnabled=YES), jadi
-    /// pemain boleh e-mel/AirDrop fail ini kalau tidak dapat salin teks.
-    private func simpanLaporanGl(_ gl: GLProbe.Result) {
-        let url = McConfig.dataRoot.appendingPathComponent("gl_report.txt")
-        let teks = GLProbe.report(gl)
+    /// Simpan laporan Husk ke Documents/husk_report.txt.
+    /// Documents boleh dibuka dalam app Files (UIFileSharingEnabled=YES).
+    private func simpanLaporanHusk(_ teks: String) {
+        let url = McConfig.dataRoot.appendingPathComponent("husk_report.txt")
         do {
             try teks.write(to: url, atomically: true, encoding: .utf8)
-            NSLog("[MC] laporan GLES disimpan: %@", url.path)
+            NSLog("[MC] laporan Husk disimpan: %@", url.path)
         } catch {
-            NSLog("[MC] gagal simpan laporan GLES: %@", String(describing: error))
+            NSLog("[MC] gagal simpan laporan Husk: %@", String(describing: error))
         }
     }
 
@@ -256,32 +239,11 @@ final class LauncherViewController: UIViewController {
     /// Dipanggil dari dua tempat: selepas GLProbe.run() dan selepas HTML hantar "ready".
     private func sendGlProbeIfReady() {
         glLock.lock()
-        let gl = glResult
-        let ld = loadResult
+        let hk = huskLaporan
         let ready = htmlReady
         glLock.unlock()
-        guard ready, let gl = gl else { return }
-
-        emit("glProbe", [
-            "ok": gl.ok,
-            "render": gl.triangleRendered,
-            "version": gl.version,
-            "renderer": gl.renderer,
-            "gl3": gl.gl3,
-            "pvrtc": gl.pvrtc,
-            "etc1": gl.etc1,
-            "s3tc": gl.s3tc,
-            "report": GLProbe.report(gl),
-        ])
-
-        if let ld = ld {
-            emit("loadProbe", [
-                "elfOK": ld.elfLoadOK,
-                "machoOK": ld.machoStrukturSah,
-                "controlOK": ld.controlOK,
-                "report": ld.report,
-            ])
-        }
+        guard ready, !hk.isEmpty else { return }
+        emit("huskProbe", ["report": hk, "ada": McHusk.shared.tersedia])
     }
 
     /// Ujian Husk: adakah API translation layer ada, dan apa kata ujian peranti?
@@ -314,8 +276,11 @@ final class LauncherViewController: UIViewController {
         }
 
         NSLog("%@", lap)
+        simpanLaporanHusk(lap)
         glLock.lock(); huskLaporan = lap; glLock.unlock()
-        if htmlReady { emit("huskProbe", ["report": lap, "ada": h.tersedia]) }
+        // JANGAN hantar di sini sahaja - HTML mungkin belum sedia.
+        // sendGlProbeIfReady() akan hantar bila kedua-dua sedia.
+        sendGlProbeIfReady()
     }
 
     private func doCheck() {
