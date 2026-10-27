@@ -42,6 +42,12 @@ targets:
       # (dikompil). `type: group` hanya kumpulan navigasi - fail tidak dikompil,
       # itulah sebabnya simbol shim tiada dlm binari pada build pertama.
       - path: enjin
+      # Kod Husk (GPL-2.0) - loader ELF arm64 + shim bionic + framework.
+      # Lihat KOD_PIHAK_KETIGA.md. Ini yang membolehkan libGTASA.so (ELF)
+      # berjalan di iOS tanpa menukar binari.
+      - path: husk
+        excludes:
+          - "LICENSE-HUSK-GPL2.txt"
     settings:
       base:
         # shim guna os_log, EAGLContext, mmap - perlu disasarkan ke iOS 17
