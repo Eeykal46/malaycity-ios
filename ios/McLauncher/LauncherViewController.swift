@@ -177,6 +177,22 @@ final class LauncherViewController: UIViewController {
                 self.prefs.set(gpu, forKey: "gpu")
             }
             NSLog("[MC] GPU=%@ data=%@", McGPU.describe, McConfig.dataRoot.path)
+
+            // UJIAN GLES: jawab soalan paling kritikal projek (lihat GLProbe.swift)
+            let gl = GLProbe.run()
+            NSLog("%@", GLProbe.report(gl))
+            self.emit("glProbe", [
+                "ok": gl.ok,
+                "render": gl.triangleRendered,
+                "version": gl.version,
+                "renderer": gl.renderer,
+                "gl3": gl.gl3,
+                "pvrtc": gl.pvrtc,
+                "etc1": gl.etc1,
+                "s3tc": gl.s3tc,
+                "report": GLProbe.report(gl),
+            ])
+
             let d = McDownloader(dataRoot: McConfig.dataRoot,
                                  privateDir: McConfig.privateRoot,
                                  gpuType: gpu)

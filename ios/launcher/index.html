@@ -194,6 +194,7 @@ button{font:inherit;color:inherit;background:none;border:none;cursor:pointer}
     </div>
     <div class="pill" id="srvPill"><span class="l"><i class="dot y" id="srvDot"></i><span id="srvName">MALAYCITY</span></span><span class="muted" style="font-size:12px" id="srvPing">…</span></div>
     <div id="iosNote" style="display:none;font-size:12px;line-height:1.45;color:var(--grey);padding:0 2px"></div>
+    <pre id="glBox" style="display:none;font-family:ui-monospace,Menlo,monospace;font-size:10px;line-height:1.35;white-space:pre-wrap;max-height:34vh;overflow:auto;background:rgba(0,0,0,.45);border:1px solid rgba(255,255,255,.12);border-radius:12px;padding:8px 10px;margin:2px 0"></pre>
     <div class="sp" style="flex:1"></div>
     <div id="playRow">
       <button class="pill btnred" id="btnPlay">MAIN</button>
@@ -358,6 +359,15 @@ var H = {
     S.ios = d||{};
     var b=$("iosNote");
     if(b && d && d.note){ b.textContent = d.note; b.style.display="block"; }
+  },
+  glProbe: function(d){
+    // Hasil ujian GLES - dipapar di skrin utama supaya boleh dibaca pada iPhone.
+    S.gl = d||{};
+    var b=$("glBox");
+    if(!b) return;
+    b.style.display="block";
+    b.textContent = (d.report || "").trim();
+    b.style.color = d.render ? "#30D158" : "#FF6B80";
   }
 };
 

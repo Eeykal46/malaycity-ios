@@ -37,6 +37,12 @@ targets:
       # (`launcher/` = salinan index.html Android, dibuat oleh preGenCommand di atas)
       - path: launcher
         type: folder
+    dependencies:
+      # UJIAN KRITIKAL: adakah OpenGL ES masih berfungsi di iOS 26?
+      # GLProbe.swift guna EAGLContext + shader + render sebenar.
+      # Deprecated sejak iOS 12 tetapi MASIH ADA - ini yang diuji.
+      - sdk: OpenGLES.framework
+      - sdk: GLKit.framework
     settings:
       base:
         PRODUCT_NAME: McLauncher
