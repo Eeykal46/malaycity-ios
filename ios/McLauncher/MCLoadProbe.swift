@@ -19,11 +19,14 @@ final class MCLoadProbe {
         var elfMagic = ""
         var elfLoadOK = false
         var elfError = ""
-        var machoLoadOK = false
+        /// Struktur dylib yang kita bina SAH (disemak sendiri, bukan dlopen).
+        var machoStrukturSah = false
         var machoError = ""
         var controlOK = false
         var controlError = ""
         var bundleHasSo = false
+        var soMagic = ""
+        var soIsELF = false
         var report = ""
     }
 
@@ -38,9 +41,10 @@ final class MCLoadProbe {
             r.controlError = String(cString: dlerror())
         }
 
-        // ---- 1. ELF ----
-        // Cipta fail ELF minimum dlm tmp dan cuba muatkan.
-        // Kita juga semak sama ada libGTASA.so sebenar ada dlm bundle/dokumen.
+        // ---- 1. ELF: SEMAK MAGIC SAHAJA, JANGAN dlopen ----
+        // CRASH: dlopen() pada fail ELF boleh menyebabkan dyld crash pada iOS.
+        // Kita sudah tahu jawapannya dari dokumentasi: dyld hanya terima Mach-O.
+        // Jadi cukup semak magic - tiada risiko.
         let elfPath = NSTemporaryDirectory() + "probe.elf"
         let elfBytes: [UInt8] = [
             0x7F, 0x45, 0x4C, 0x46,            // \x7fELF
@@ -50,40 +54,53 @@ final class MCLoadProbe {
         ] + [UInt8](repeating: 0, count: 56)
         r.elfMagic = "7F 45 4C 46 (ELF64)"
         try? Data(elfBytes).write(to: URL(fileURLWithPath: elfPath))
+        // (tiada dlopen di sini - sebabnya di atas)
 
-        if let h = dlopen(elfPath, RTLD_LAZY) {
-            r.elfLoadOK = true
-            dlclose(h)
-        } else {
-            r.elfError = String(cString: dlerror())
-        }
-
-        // Adakah libGTASA.so sebenar wujud di mana-mana yg boleh dibaca?
+        // Adakah libGTASA.so sebenar wujud, dan adakah ia ELF?
         let soPath = (McConfig.dataRoot.path as NSString).appendingPathComponent("libGTASA.so")
         r.bundleHasSo = FileManager.default.fileExists(atPath: soPath)
         if r.bundleHasSo {
-            if let h = dlopen(soPath, RTLD_LAZY) {
-                dlclose(h)
+            // PENTING: JANGAN dlopen sebelum semak magic.
+            // dyld boleh CRASH (bukan pulangkan nil) apabila diberi fail
+            // bukan-Mach-O yang besar. Kita semak 4 bait pertama dahulu.
+            if let hd = FileManager.default.contents(atPath: soPath), hd.count >= 4 {
+                let m = Array(hd.prefix(4))
+                let isELF = (m[0] == 0x7F && m[1] == 0x45 && m[2] == 0x4C && m[3] == 0x46)
+                let isMachO = (m[0] == 0xCF && m[1] == 0xFA && m[2] == 0xED && m[3] == 0xFE)
+                    || (m[0] == 0xCE && m[1] == 0xFA && m[2] == 0xED && m[3] == 0xFE)
+                r.soMagic = String(format: "%02X %02X %02X %02X", m[0], m[1], m[2], m[3])
+                if isELF {
+                    // Terbukti ELF. dlopen TIDAK akan berjaya - jangan cuba.
+                    r.elfError = "libGTASA.so ialah ELF (\(r.soMagic)) - dyld iOS hanya terima Mach-O"
+                    r.soIsELF = true
+                } else if isMachO {
+                    if let h = dlopen(soPath, RTLD_LAZY) {
+                        r.elfLoadOK = true
+                        dlclose(h)
+                    } else {
+                        r.elfError = "Mach-O tetapi dlopen gagal: " + String(cString: dlerror())
+                    }
+                } else {
+                    r.elfError = "magic tidak dikenali: \(r.soMagic)"
+                }
             } else {
-                r.elfError += " | sebenar: " + String(cString: dlerror())
+                r.elfError = "tidak dapat baca 4 bait pertama libGTASA.so"
             }
         }
 
-        // ---- 2. Mach-O dylib tanpa tandatangan ----
-        // NOTA: versi pertama ujian ini SALAH - ia salin binari UTAMA (.app/McLauncher)
-        // yang jenisnya MH_EXECUTE, lalu namakan .dylib. iOS tolak dgn mesej
-        // "cannot dlopen a main executable" - itu BUKAN ujian tandatangan.
-        // Sekarang: cipta Mach-O MH_DYLIB minimum yang sah, tanpa tandatangan.
-        let dylibPath = NSTemporaryDirectory() + "probe2.dylib"
-        try? FileManager.default.removeItem(atPath: dylibPath)
+        // ---- 2. Mach-O: SEMAK SAHAJA, JANGAN dlopen ----
+        // CRASH: versi sebelum ini dlopen() dylib sintetik lalu dlclose().
+        // Dylib tanpa kod + tanpa tandatangan boleh menyebabkan dyld crash
+        // (bukan pulangkan nil) - app tidak boleh dibuka langsung.
+        //
+        // Jadi: kita bina dylib dan SAHKAN strukturnya sendiri (semak bait),
+        // tidak menyerahkannya kepada dyld. Ujian "boleh codesign" dibuat
+        // berasingan di GitHub Actions pada macOS, bukan pada peranti pemain.
         if let dylib = MCLoadProbe.binaDylibMinimum() {
-            try? dylib.write(to: URL(fileURLWithPath: dylibPath))
-            if let h = dlopen(dylibPath, RTLD_LAZY) {
-                r.machoLoadOK = true
-                dlclose(h)
-            } else {
-                r.machoError = String(cString: dlerror())
-            }
+            let sah = MCLoadProbe.semakStrukturDylib(dylib)
+            r.machoStrukturSah = sah.ok
+            r.machoError = sah.nota
+            // TIDAK dlopen. Tiada risiko crash.
         } else {
             r.machoError = "gagal bina dylib minimum"
         }
@@ -173,24 +190,64 @@ final class MCLoadProbe {
         return d
     }
 
+    /// Semak struktur Mach-O yang kita bina sendiri. TIADA dlopen.
+    /// Pulangkan (ok, nota).
+    private static func semakStrukturDylib(_ d: Data) -> (ok: Bool, nota: String) {
+        guard d.count >= 32 else { return (false, "fail terlalu kecil") }
+
+        func r32(_ o: Int) -> UInt32 {
+            guard o + 4 <= d.count else { return 0 }
+            return d.withUnsafeBytes { $0.loadUnaligned(fromByteOffset: o, as: UInt32.self) }
+        }
+
+        let magic = r32(0)
+        if magic != 0xFEEDFACF { return (false, "magic salah: 0x\(String(magic, radix: 16))") }
+        let cputype = r32(4)
+        if cputype != 0x0100000C { return (false, "cputype bukan arm64") }
+        let filetype = r32(12)
+        if filetype != 6 { return (false, "filetype bukan MH_DYLIB (\(filetype))") }
+        let ncmds = r32(16)
+        let sizeofcmds = r32(20)
+
+        var off = 32
+        var jumpaSeg = false
+        for _ in 0..<ncmds {
+            if off + 8 > d.count { return (false, "command terkeluar fail") }
+            let cmd = r32(off)
+            let sz = r32(off + 4)
+            if cmd == 0x19 { jumpaSeg = true }
+            off += Int(sz)
+            if sz == 0 { return (false, "saiz command 0") }
+        }
+        if !jumpaSeg { return (false, "tiada LC_SEGMENT_64") }
+        if off - 32 != Int(sizeofcmds) {
+            return (false, "sizeofcmds tak padan (\(off - 32) vs \(sizeofcmds))")
+        }
+        return (true, "MH_DYLIB arm64, \(ncmds) command, \(d.count) bait")
+    }
+
     private static func laporan(_ r: Result) -> String {
         var s = "=== UJIAN MUAT ENJIN DI IOS ===\n"
         s += "kawalan (libSystem) : \(r.controlOK ? "BERJAYA" : "GAGAL")\n"
         if !r.controlOK { s += "   \(r.controlError)\n" }
         s += "\n"
-        s += "ELF  (\(r.elfMagic)) : \(r.elfLoadOK ? "DIMUAT" : "DITOLAK")\n"
-        if !r.elfLoadOK { s += "   \(r.elfError)\n" }
         s += "libGTASA.so di Documents : \(r.bundleHasSo ? "ADA" : "tiada")\n"
-        s += "\n"
-        s += "Mach-O tanpa tandatangan : \(r.machoLoadOK ? "DIMUAT" : "DITOLAK")\n"
-        if !r.machoLoadOK { s += "   \(r.machoError)\n" }
-        s += "\n"
-        if r.controlOK && !r.elfLoadOK {
-            s += "KESIMPULAN: dlopen BERFUNGSI, tetapi ELF DITOLAK.\n"
-            s += "Enjin MESTI ditukar ke Mach-O sebelum boleh dimuatkan.\n"
+        if !r.soMagic.isEmpty {
+            s += "magic 4 bait : \(r.soMagic)"
+            s += r.soIsELF ? "  <-- ELF (Android)\n" : "\n"
         }
-        if !r.machoLoadOK {
-            s += "Mach-O tanpa tandatangan juga ditolak -> perlu codesign.\n"
+        if !r.elfError.isEmpty { s += "   \(r.elfError)\n" }
+        s += "\n"
+        s += "Struktur Mach-O (binaan sendiri) : "
+        s += r.machoStrukturSah ? "SAH\n" : "TIDAK SAH\n"
+        if !r.machoError.isEmpty { s += "   \(r.machoError)\n" }
+        s += "\n"
+        if r.soIsELF {
+            s += "KESIMPULAN: enjin ialah ELF. dyld iOS HANYA terima Mach-O.\n"
+            s += "Enjin MESTI ditukar ke Mach-O (dan ditandatangan) dahulu.\n"
+            s += "Tiada jumlah kerja pada client boleh mengubah fakta ini.\n"
+        } else if r.elfLoadOK {
+            s += "KESIMPULAN: enjin Mach-O BERJAYA dimuatkan!\n"
         }
         return s
     }

@@ -568,7 +568,7 @@ function renderTab(id){
         ring.innerHTML =
           'kawalan dlopen : <b style="color:'+(l2.controlOK?'#30D158':'#FF6B80')+'">'+(l2.controlOK?'BERJAYA':'GAGAL')+'</b><br>' +
           'ELF ditolak    : <b style="color:'+(l2.elfOK?'#30D158':'#FF6B80')+'">'+(l2.elfOK?'TIDAK':'YA')+'</b><br>' +
-          'Mach-O         : <b style="color:'+(l2.machoOK?'#30D158':'#FF6B80')+'">'+(l2.machoOK?'DIMUAT':'DITOLAK')+'</b>';
+          'Mach-O struktur: <b style="color:'+(l2.machoOK?'#30D158':'#FF6B80')+'">'+(l2.machoOK?'SAH':'TIDAK SAH')+'</b>';
         r.style.flexWrap="wrap";
         r.appendChild(ring);
       }

@@ -19,6 +19,7 @@ UJIAN = [
     ('Shim iOS meliputi 20 simbol Android', [sys.executable, os.path.join(HERE, 'alat', 'uji_shim.py')]),
     ('Peta alamat -> simbol (166/199)', [sys.executable, os.path.join(HERE, 'alat', 'uji_peta.py')]),
     ('Dylib minimum sah (MH_DYLIB arm64)', [sys.executable, os.path.join(HERE, 'alat', 'uji_dylib.py')]),
+    ('Tiada dlopen berisiko (elak crash)', [sys.executable, os.path.join(HERE, 'alat', 'uji_dlopen_selamat.py')]),
     ('McIni - settings.ini (komen kekal, round-trip)', [sys.executable, os.path.join(HERE, 'uji_ini.py')]),
     ('McQuery - paket SA-MP UDP i', [sys.executable, os.path.join(HERE, 'uji_query.py')]),
     ('check() - status manifest', [sys.executable, os.path.join(HERE, 'uji_check.py')]),

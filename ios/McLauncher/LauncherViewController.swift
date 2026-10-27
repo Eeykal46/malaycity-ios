@@ -273,7 +273,7 @@ final class LauncherViewController: UIViewController {
         if let ld = ld {
             emit("loadProbe", [
                 "elfOK": ld.elfLoadOK,
-                "machoOK": ld.machoLoadOK,
+                "machoOK": ld.machoStrukturSah,
                 "controlOK": ld.controlOK,
                 "report": ld.report,
             ])
