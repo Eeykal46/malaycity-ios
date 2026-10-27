@@ -138,6 +138,7 @@ final class LauncherViewController: UIViewController {
         setSetting:   function(k, v){ post("setSetting", [k, String(v)]); },
         getSettings:  function(){ return window.__mcSettings || "{}"; },
         iosInfo:      function(){ post("iosInfo"); },
+        copyText:     function(t){ post("copyText", [String(t)]); },
         openUrl:      function(u){ post("openUrl", [u]); },
         exitApp:      function(){ post("exitApp"); },
         play:         function(n){ post("play", [n]); }
@@ -189,6 +190,7 @@ final class LauncherViewController: UIViewController {
             let gl = GLProbe.run()
             NSLog("%@", GLProbe.report(gl))
             self.glLock.lock(); self.glResult = gl; self.glLock.unlock()
+            self.simpanLaporanGl(gl)
             self.sendGlProbeIfReady()
 
             let d = McDownloader(dataRoot: McConfig.dataRoot,
@@ -211,6 +213,20 @@ final class LauncherViewController: UIViewController {
             Thread.sleep(forTimeInterval: 0.1)
         }
         return downloader()
+    }
+
+    /// Simpan laporan GLES ke Documents/gl_report.txt.
+    /// Documents boleh dibuka dalam app Files (UIFileSharingEnabled=YES), jadi
+    /// pemain boleh e-mel/AirDrop fail ini kalau tidak dapat salin teks.
+    private func simpanLaporanGl(_ gl: GLProbe.Result) {
+        let url = McConfig.dataRoot.appendingPathComponent("gl_report.txt")
+        let teks = GLProbe.report(gl)
+        do {
+            try teks.write(to: url, atomically: true, encoding: .utf8)
+            NSLog("[MC] laporan GLES disimpan: %@", url.path)
+        } catch {
+            NSLog("[MC] gagal simpan laporan GLES: %@", String(describing: error))
+        }
     }
 
     /// Maklumat platform untuk HTML papar mesej yg betul.
@@ -354,6 +370,14 @@ final class LauncherViewController: UIViewController {
 
         case "openUrl":
             openExternal(args.first as? String)
+
+        case "copyText":
+            // WebView iOS tak selalu benarkan navigator.clipboard, jadi Swift buat.
+            let t = (args.first as? String) ?? ""
+            DispatchQueue.main.async {
+                UIPasteboard.general.string = t
+                NSLog("[MC] laporan disalin (%d aksara)", t.count)
+            }
 
         case "exitApp":
             // Android: finishAndRemoveTask(). iOS tiada API "tutup app" rasmi.

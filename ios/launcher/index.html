@@ -223,6 +223,23 @@ function call(fn){ try{ if(N && N[fn]) return N[fn].apply(N, [].slice.call(argum
 function lsGet(k,d){ try{ var v=localStorage.getItem(k); return v===null?d:v; }catch(e){ return d; } }
 function lsSet(k,v){ try{ localStorage.setItem(k,v); }catch(e){} }
 
+/* salin teks ke clipboard (Swift buat kerja, fallback ke DOM) */
+function salin(txt){
+  var ok=false;
+  if(N && N.copyText){ try{ N.copyText(txt); ok=true; }catch(e){} }
+  if(!ok){
+    try{
+      var ta=document.createElement("textarea");
+      ta.value=txt; ta.style.position="fixed"; ta.style.opacity="0";
+      document.body.appendChild(ta); ta.select();
+      ok=document.execCommand("copy");
+      document.body.removeChild(ta);
+    }catch(e){}
+  }
+  island(ok?"ok":"err", ok?"Laporan disalin - tampal kepada Claude":"Gagal salin");
+  return ok;
+}
+
 /* ================= pulau ================= */
 function island(kind, text){
   var ico=$("isIco"), is=$("island");
@@ -472,9 +489,11 @@ var TABS=[
     {n:"Versi app",t:"info",k:"version"}]},
   {id:"d",name:"Diagnostik",opts:[
     {n:"Ujian OpenGL ES",d:"Adakah iOS masih boleh render GLES? (soalan paling penting)",t:"din",k:"__gl"},
+    {n:"Salin laporan",d:"Salin teks penuh, tampal kepada Claude",t:"btn2",k:"copy"},
     {n:"Butiran penuh",d:"",t:"pre",k:"__glreport"},
     {n:"Server",d:"",t:"info",k:"__srv"},
-    {n:"Platform",d:"",t:"info",k:"__plat"}]}
+    {n:"Platform",d:"",t:"info",k:"__plat"},
+    {n:"Fail laporan",d:"gl_report.txt dlm app Files",t:"info",k:"dataDir"}]}
 ];
 function renderTabs(){
   var t=$("tabs"); t.innerHTML="";
@@ -525,6 +544,15 @@ function renderTab(id){
       else if(g2.render){ c.textContent="BERFUNGSI"; c.style.color="#30D158"; }
       else { c.textContent="GAGAL"; c.style.color="#FF6B80"; }
       r.appendChild(c);
+    } else if(o.t==="btn2"){
+      // butang tindakan (cth Salin laporan)
+      var b2=document.createElement("button"); b2.className="pill"; b2.style.height="34px";
+      b2.textContent="Salin";
+      b2.onclick=function(){
+        var txt=(S.gl&&S.gl.report)?S.gl.report:"(ujian belum dijalankan)";
+        salin(txt);
+      };
+      r.appendChild(b2);
     } else if(o.t==="pre"){
       // blok teks penuh (boleh skrol)
       var pr=document.createElement("pre");
