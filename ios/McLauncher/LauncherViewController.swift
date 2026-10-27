@@ -30,6 +30,7 @@ final class LauncherViewController: UIViewController {
     /// Hasil ujian GLES. Dijalankan SEKALI, dihantar bila HTML sudah bersedia.
     /// (Dulu dihantar sejurus selepas dijalankan -> HTML belum ada handler -> hilang.)
     private var glResult: GLProbe.Result?
+    private var loadResult: MCLoadProbe.Result?
     private var htmlReady = false
     private let glLock = NSLock()
 
@@ -191,6 +192,12 @@ final class LauncherViewController: UIViewController {
             NSLog("%@", GLProbe.report(gl))
             self.glLock.lock(); self.glResult = gl; self.glLock.unlock()
             self.simpanLaporanGl(gl)
+
+            // UJIAN PENENTU: boleh tak iOS muatkan enjin ELF?
+            let ld = MCLoadProbe.run()
+            NSLog("%@", ld.report)
+            self.glLock.lock(); self.loadResult = ld; self.glLock.unlock()
+
             self.sendGlProbeIfReady()
 
             let d = McDownloader(dataRoot: McConfig.dataRoot,
@@ -246,6 +253,7 @@ final class LauncherViewController: UIViewController {
     private func sendGlProbeIfReady() {
         glLock.lock()
         let gl = glResult
+        let ld = loadResult
         let ready = htmlReady
         glLock.unlock()
         guard ready, let gl = gl else { return }
@@ -261,6 +269,15 @@ final class LauncherViewController: UIViewController {
             "s3tc": gl.s3tc,
             "report": GLProbe.report(gl),
         ])
+
+        if let ld = ld {
+            emit("loadProbe", [
+                "elfOK": ld.elfLoadOK,
+                "machoOK": ld.machoLoadOK,
+                "controlOK": ld.controlOK,
+                "report": ld.report,
+            ])
+        }
     }
 
     private func doCheck() {
