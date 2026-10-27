@@ -495,7 +495,7 @@ var TABS=[
   {id:"d",name:"Diagnostik",opts:[
     {n:"Ujian OpenGL ES",d:"Adakah iOS masih boleh render GLES?",t:"din",k:"__gl"},
     {n:"Muat enjin (ELF)",d:"Boleh tak iOS muatkan libGTASA.so?",t:"din2",k:"__load"},
-    {n:"Salin laporan",d:"Salin teks penuh, tampal kepada Claude",t:"btn2",k:"copy"},
+    {n:"Salin semua laporan",d:"Salin GLES + muat enjin",t:"btn2",k:"copy"},
     {n:"Butiran penuh",d:"",t:"pre",k:"__glreport"},
     {n:"Laporan muat enjin",d:"",t:"pre2",k:"__loadreport"},
     {n:"Server",d:"",t:"info",k:"__srv"},
@@ -561,6 +561,17 @@ function renderTab(id){
       else if(l2.elfOK){ c2.textContent="BOLEH DIMUAT"; c2.style.color="#30D158"; }
       else { c2.textContent="DITOLAK"; c2.style.color="#FF6B80"; }
       r.appendChild(c2);
+      // baris ringkas: kawalan / ELF / Mach-O / so ada
+      if(l2.report){
+        var ring=document.createElement("div");
+        ring.style.cssText="flex:1 1 100%;font-size:11px;line-height:1.5;color:#8E8E93;background:rgba(0,0,0,.35);border-radius:8px;padding:6px 8px;margin-top:4px;font-family:ui-monospace,Menlo,monospace";
+        ring.innerHTML =
+          'kawalan dlopen : <b style="color:'+(l2.controlOK?'#30D158':'#FF6B80')+'">'+(l2.controlOK?'BERJAYA':'GAGAL')+'</b><br>' +
+          'ELF ditolak    : <b style="color:'+(l2.elfOK?'#30D158':'#FF6B80')+'">'+(l2.elfOK?'TIDAK':'YA')+'</b><br>' +
+          'Mach-O         : <b style="color:'+(l2.machoOK?'#30D158':'#FF6B80')+'">'+(l2.machoOK?'DIMUAT':'DITOLAK')+'</b>';
+        r.style.flexWrap="wrap";
+        r.appendChild(ring);
+      }
     } else if(o.t==="pre2"){
       var pr2=document.createElement("pre");
       pr2.style.cssText="flex:1 1 100%;font-family:ui-monospace,Menlo,monospace;font-size:10px;line-height:1.4;white-space:pre-wrap;max-height:40vh;overflow:auto;background:rgba(0,0,0,.4);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:8px;margin:6px 0 0";
@@ -570,12 +581,14 @@ function renderTab(id){
       r.style.flexWrap="wrap";
       r.appendChild(pr2);
     } else if(o.t==="btn2"){
-      // butang tindakan (cth Salin laporan)
+      // butang tindakan (salin SEMUA laporan: GLES + muat enjin)
       var b2=document.createElement("button"); b2.className="pill"; b2.style.height="34px";
       b2.textContent="Salin";
       b2.onclick=function(){
-        var txt=(S.gl&&S.gl.report)?S.gl.report:"(ujian belum dijalankan)";
-        salin(txt);
+        var gl=(S.gl&&S.gl.report)?S.gl.report:"(GLES: belum dijalankan)";
+        var ld=(S.load&&S.load.report)?S.load.report:"(MUAT ENJIN: belum dijalankan)";
+        var plat="PLATFORM: "+(S.platform||"?")+"  server: "+(S.settings.__srv||"?");
+        salin(plat+"\n\n"+gl+"\n"+ld);
       };
       r.appendChild(b2);
     } else if(o.t==="pre"){
