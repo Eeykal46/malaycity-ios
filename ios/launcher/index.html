@@ -197,6 +197,7 @@ button{font:inherit;color:inherit;background:none;border:none;cursor:pointer}
     <div class="sp" style="flex:1"></div>
     <div id="playRow">
       <button class="pill btnred" id="btnPlay">MAIN</button>
+      <button class="pill" id="btnEnjin" style="background:rgba(255,46,77,.22);border-color:rgba(255,46,77,.6)">JALAN ENJIN</button>
       <button class="round" id="btnSet" aria-label="Tetapan"><svg class="ico" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></button>
     </div>
     <div id="social"></div>
@@ -389,6 +390,17 @@ var H = {
   huskProbe: function(d){
     // Hasil ujian TRANSLATION LAYER (Husk).
     S.husk = d||{};
+    if(S.screen==="sSet" && S.tab==="d") renderTab("d");
+  },
+  enjinHasil: function(d){
+    // Hasil cubaan mula enjin.
+    S.enjin = d||{};
+    if(d && d.ok){
+      island(d.frame>0 ? "ok" : "warn",
+             d.frame>0 ? ("Enjin jalan · "+d.frame+" frame") : "Enjin bermula");
+    } else {
+      island("err", (d && d.msg) || "Enjin gagal bermula");
+    }
     if(S.screen==="sSet" && S.tab==="d") renderTab("d");
   }
 };
@@ -613,6 +625,12 @@ function renderTab(id){
 
 /* ================= butang ================= */
 $("btnPlay").onclick=play;
+$("btnEnjin").onclick=function(){
+  island("spin","Memulakan enjin…");
+  $("btnEnjin").disabled=true;
+  setTimeout(function(){ $("btnEnjin").disabled=false; }, 8000);
+  call("mulaEnjin");
+};
 $("nick").addEventListener("keydown",function(e){ if(e.key==="Enter"){ e.target.blur(); } });
 $("nick").addEventListener("change",function(){ call("setNick", $("nick").value.trim()); });
 $("btnSet").onclick=function(){ show("sSet"); island("ok","Tetapan"); var r=call("getSettings"); if(r){ try{ S.settings=JSON.parse(r); }catch(e){} } renderTab(S.tab||"g"); };

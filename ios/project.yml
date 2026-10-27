@@ -48,6 +48,12 @@ targets:
       - path: husk
         excludes:
           - "LICENSE-HUSK-GPL2.txt"
+      # APK Android yang dibundle dalam app (35.8 MB).
+      # Ini barang mobile kau - enjin + client + assets - supaya Husk boleh
+      # menjalankannya TANPA muat turun dan TANPA APK berasingan.
+      # Dijana semula dengan: ios/alat/bundle_apk.ps1
+      - path: enjin/bundel/MALAYCITY.apk
+        buildPhase: resources
     settings:
       base:
         # shim guna os_log, EAGLContext, mmap - perlu disasarkan ke iOS 17

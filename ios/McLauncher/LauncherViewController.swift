@@ -139,6 +139,7 @@ final class LauncherViewController: UIViewController {
         getSettings:  function(){ return window.__mcSettings || "{}"; },
         iosInfo:      function(){ post("iosInfo"); },
         copyText:     function(t){ post("copyText", [String(t)]); },
+        mulaEnjin:    function(){ post("mulaEnjin"); },
         openUrl:      function(u){ post("openUrl", [u]); },
         exitApp:      function(){ post("exitApp"); },
         play:         function(n){ post("play", [n]); }
@@ -261,17 +262,16 @@ final class LauncherViewController: UIViewController {
             let chk = h.ujianPeranti(bolehLaksana: false)
             lap += "\nUJIAN PERANTI:\n\(chk)\n"
 
-            // APK dlm Documents?
-            let dir = McConfig.dataRoot
-            let apks = (try? FileManager.default.contentsOfDirectory(atPath: dir.path))?
-                .filter { $0.lowercased().hasSuffix(".apk") } ?? []
-            lap += "\nAPK dlm Documents: \(apks.count)"
-            if let a = apks.first {
-                lap += " (\(a))"
-                let rep = h.laporanScan(apk: dir.appendingPathComponent(a).path)
-                lap += "\nLAPORAN SCAN:\n\(rep.prefix(1500))"
+            // APK dibundle dalam app (bukan dimuat turun, bukan manual).
+            if let apk = h.apkBundel {
+                lap += "\nAPK bundel : \(URL(fileURLWithPath: apk).lastPathComponent)"
+                if let sz = try? FileManager.default.attributesOfItem(atPath: apk)[.size] as? NSNumber {
+                    lap += " (\(sz.intValue / 1048576) MB)"
+                }
+                let rep = h.laporanScan(apk: apk)
+                lap += "\nLAPORAN SCAN:\n\(rep.prefix(2000))"
             } else {
-                lap += "\n(tiada APK - salin MALAYCITY.apk ke app Files utk uji)"
+                lap += "\nAPK bundel : TIADA (semak ios/enjin/bundel/MALAYCITY.apk)"
             }
         }
 
@@ -415,6 +415,46 @@ final class LauncherViewController: UIViewController {
         case "play":
             let nick = ((args.first as? String) ?? "").trimmingCharacters(in: .whitespaces)
             play(nick)
+
+        case "mulaEnjin":
+            // Jalankan APK Android yang dibundle melalui Husk.
+            // Ini ganti "main di Android" - sekarang enjin jalan di app ini.
+            bgQueue.async { [weak self] in
+                guard let self = self else { return }
+                let h = McHusk.shared
+                guard h.tersedia else {
+                    self.emit("enjinHasil", [
+                        "ok": false,
+                        "msg": "Translation layer tidak dilink",
+                    ])
+                    return
+                }
+                guard let apk = h.apkBundel else {
+                    self.emit("enjinHasil", [
+                        "ok": false,
+                        "msg": "APK bundel tiada dlm app",
+                    ])
+                    return
+                }
+                NSLog("[MC] mulaEnjin: %@", apk)
+                let ok = h.mula(apk: apk, saat: 0)
+                var log = ""
+                if ok {
+                    // tunggu sehingga 3 saat untuk frame pertama / log
+                    var n = 0
+                    while n < 30 && !h.selesai {
+                        Thread.sleep(forTimeInterval: 0.1)
+                        n += 1
+                        if h.frame > 0 { break }
+                    }
+                    log = h.log()
+                }
+                self.emit("enjinHasil", [
+                    "ok": ok,
+                    "frame": h.frame,
+                    "log": String(log.suffix(3000)),
+                ])
+            }
 
         default:
             NSLog("[MC] arahan tak dikenali: %@", fn)
