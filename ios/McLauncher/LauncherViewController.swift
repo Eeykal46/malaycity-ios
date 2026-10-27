@@ -291,6 +291,7 @@ final class LauncherViewController: UIViewController {
                 var st: [String: Any] = [
                     "version": McConfig.versionName,
                     "abi": McConfig.archLabel,
+                    "platform": "iOS \(UIDevice.current.systemVersion)",
                 ]
                 let nick = self.settings.getNick()
                 st["nick"] = nick.isEmpty ? (self.prefs.string(forKey: "nick") ?? "") : nick

@@ -194,7 +194,6 @@ button{font:inherit;color:inherit;background:none;border:none;cursor:pointer}
     </div>
     <div class="pill" id="srvPill"><span class="l"><i class="dot y" id="srvDot"></i><span id="srvName">MALAYCITY</span></span><span class="muted" style="font-size:12px" id="srvPing">…</span></div>
     <div id="iosNote" style="display:none;font-size:12px;line-height:1.45;color:var(--grey);padding:0 2px"></div>
-    <pre id="glBox" style="display:none;font-family:ui-monospace,Menlo,monospace;font-size:10px;line-height:1.35;white-space:pre-wrap;max-height:34vh;overflow:auto;background:rgba(0,0,0,.45);border:1px solid rgba(255,255,255,.12);border-radius:12px;padding:8px 10px;margin:2px 0"></pre>
     <div class="sp" style="flex:1"></div>
     <div id="playRow">
       <button class="pill btnred" id="btnPlay">MAIN</button>
@@ -269,6 +268,7 @@ var H = {
   // keadaan awal: versi, nama, tetapan
   state: function(d){
     $("ver").textContent = "v" + (d.version||"?") + " · " + (d.abi||"");
+    S.platform = d.platform || "";
     if(d.nick) $("nick").value = d.nick;
     S.settings = d.settings || {};
   },
@@ -326,15 +326,18 @@ var H = {
       [{t:"Keluar",f:function(){call("exitApp");}},{t:"Cuba lagi",red:true,f:function(){ startDownload(); }}]);
   },
   query: function(d){
+    S.query = d||{};
     if(d.online){
       $("srvDot").className="dot g";
       $("srvName").textContent = S.server&&S.server.name ? S.server.name : (d.hostname||"MALAYCITY");
       $("srvPing").textContent = d.ping+" ms";
       if(S.screen==="sMain") island("ok", "Dalam talian · "+d.players+" / "+d.max);
+      if(S.screen==="sSet" && S.tab==="d") renderTab("d");
     } else {
       $("srvDot").className="dot";
       $("srvPing").textContent="luar talian";
       if(S.screen==="sMain") island("err","Server tidak dapat dihubungi");
+      if(S.screen==="sSet" && S.tab==="d") renderTab("d");
     }
   },
   settings: function(d){ S.settings=d||{}; if(S.screen==="sSet") renderTab(S.tab); },
@@ -359,18 +362,19 @@ var H = {
     S.ios = d||{};
     var b=$("iosNote");
     if(b && d && d.note){ b.textContent = d.note; b.style.display="block"; }
+    // isi tab Diagnostik
+    S.settings.__plat = "iOS 17+ · " + (S.platform||"") + (d.engine===false ? " · enjin belum ada" : "");
+    var q = S.query||{};
+    S.settings.__srv = q.online
+      ? (q.hostname||"server") + " · " + q.players + "/" + q.max + " · " + q.ping + " ms"
+      : "luar talian";
   },
   glProbe: function(d){
-    // Hasil ujian GLES - dipapar di skrin utama supaya boleh dibaca pada iPhone.
+    // Hasil ujian GLES disimpan; dipapar dlm Tetapan -> Diagnostik.
     S.gl = d||{};
-    var b=$("glBox");
-    if(!b) return;
-    b.style.display="block";
-    b.textContent = (d.report || "").trim();
-    b.style.color = d.render ? "#30D158" : "#FF6B80";
-    // Juga papar dlm pil atas supaya jelas kelihatan.
+    if(S.screen==="sSet" && S.tab==="d") renderTab("d");
     island(d.render ? "ok" : "err",
-           d.render ? "GLES BERFUNGSI · " + (d.renderer||"") : "GLES GAGAL · " + (d.version||""));
+           d.render ? "GLES BERFUNGSI" : "GLES GAGAL");
   }
 };
 
@@ -465,7 +469,12 @@ var TABS=[
   {id:"f",name:"Fail game",opts:[
     {n:"Semak & baiki fail",d:"Semak semua fail dan muat turun semula yang rosak",t:"btn",f:function(){ S.need={update:true}; show("sDl"); island("spin","Menyemak fail…"); call("verifyAll"); }},
     {n:"Folder fail",d:"",t:"info",k:"dataDir"},
-    {n:"Versi app",t:"info",k:"version"}]}
+    {n:"Versi app",t:"info",k:"version"}]},
+  {id:"d",name:"Diagnostik",opts:[
+    {n:"Ujian OpenGL ES",d:"Adakah iOS masih boleh render GLES? (soalan paling penting)",t:"din",k:"__gl"},
+    {n:"Butiran penuh",d:"",t:"pre",k:"__glreport"},
+    {n:"Server",d:"",t:"info",k:"__srv"},
+    {n:"Platform",d:"",t:"info",k:"__plat"}]}
 ];
 function renderTabs(){
   var t=$("tabs"); t.innerHTML="";
@@ -481,6 +490,13 @@ function setVal(k,v,local){
 }
 function renderTab(id){
   S.tab=id; renderTabs();
+  // segarkan nilai dinamik supaya tab Diagnostik sentiasa terkini
+  var q0 = S.query||{};
+  S.settings.__srv = q0.online
+    ? ((q0.hostname||"server") + " · " + q0.players + "/" + q0.max + " · " + q0.ping + " ms")
+    : "luar talian";
+  S.settings.__plat = (S.platform||"iOS") + (S.ios && S.ios.engine===false ? " · enjin belum ada" : "");
+  S.settings.__glreport = (S.gl && S.gl.report) || "";
   var tab=TABS.filter(function(x){return x.id===id;})[0], body=$("setBody"); body.innerHTML="";
   tab.opts.forEach(function(o){
     var r=document.createElement("div"); r.className="opt";
@@ -500,6 +516,24 @@ function renderTab(id){
     } else if(o.t==="info"){
       var i=document.createElement("div"); i.className="muted"; i.style.cssText="font-size:12px;text-align:right;word-break:break-all;max-width:60%";
       i.textContent=S.settings[o.k]||"—"; r.appendChild(i);
+    } else if(o.t==="din"){
+      // status GLES: hijau kalau render berjaya, merah kalau gagal
+      var g2=S.gl||{};
+      var c=document.createElement("div");
+      c.style.cssText="font-size:12px;text-align:right;font-weight:700;max-width:62%;word-break:break-word";
+      if(!g2.report){ c.textContent="belum diuji"; c.style.color="#8E8E93"; }
+      else if(g2.render){ c.textContent="BERFUNGSI"; c.style.color="#30D158"; }
+      else { c.textContent="GAGAL"; c.style.color="#FF6B80"; }
+      r.appendChild(c);
+    } else if(o.t==="pre"){
+      // blok teks penuh (boleh skrol)
+      var pr=document.createElement("pre");
+      pr.style.cssText="flex:1 1 100%;font-family:ui-monospace,Menlo,monospace;font-size:10px;line-height:1.4;white-space:pre-wrap;max-height:46vh;overflow:auto;background:rgba(0,0,0,.4);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:8px;margin:6px 0 0";
+      var g3=S.gl||{};
+      pr.textContent=(g3.report||"(ujian belum dijalankan)").trim();
+      pr.style.color = g3.report ? (g3.render?"#30D158":"#FF6B80") : "#8E8E93";
+      r.style.flexWrap="wrap";
+      r.appendChild(pr);
     }
     body.appendChild(r);
   });
