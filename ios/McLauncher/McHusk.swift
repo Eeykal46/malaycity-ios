@@ -61,7 +61,10 @@ final class McHusk {
         return ok
     }
 
-    var selesai: Bool { husk_tl_attempt_done(nil) }
+    var selesai: Bool {
+        var kod: Int32 = 0
+        return husk_tl_attempt_done(&kod)
+    }
     var frame: Int { Int(husk_tl_attempt_frames()) }
 
     func log() -> String {

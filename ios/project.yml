@@ -60,6 +60,10 @@ targets:
         IPHONEOS_DEPLOYMENT_TARGET: "17.0"
         CLANG_CXX_LANGUAGE_STANDARD: "c++20"
         CLANG_ENABLE_OBJC_ARC: YES
+        # Dedahkan API C Husk kepada Swift (tanpa ini: cannot find 'husk_tl_scan')
+        SWIFT_OBJC_BRIDGING_HEADER: enjin/McLauncher-Bridging-Header.h
+        # Header Husk dlm folder husk/ - perlu dicari
+        HEADER_SEARCH_PATHS: "$(inherited) $(SRCROOT)/husk $(SRCROOT)/enjin"
         # Shim di bawah mesti kelihatan kepada enjin (dlopen/dlsym) semasa
         # enjin dimuatkan, jadi jangan sembunyikan simbol.
         OTHER_CFLAGS: "$(inherited) -fvisibility=default"
