@@ -27,6 +27,12 @@ final class LauncherViewController: UIViewController {
     private var destroyed = false
     private let prefs = UserDefaults.standard
 
+    /// Hasil ujian GLES. Dijalankan SEKALI, dihantar bila HTML sudah bersedia.
+    /// (Dulu dihantar sejurus selepas dijalankan -> HTML belum ada handler -> hilang.)
+    private var glResult: GLProbe.Result?
+    private var htmlReady = false
+    private let glLock = NSLock()
+
     /// Nama watak SA-MP: huruf/angka/underscore, boleh ada [ ] (tag klan). 1-24 aksara.
     /// Padanan `NICK.matcher(...)` dlm LauncherActivity.java.
     private static let nickPattern = try! NSRegularExpression(pattern: #"^[A-Za-z0-9_\[\]]{1,24}$"#)
@@ -178,20 +184,12 @@ final class LauncherViewController: UIViewController {
             }
             NSLog("[MC] GPU=%@ data=%@", McGPU.describe, McConfig.dataRoot.path)
 
-            // UJIAN GLES: jawab soalan paling kritikal projek (lihat GLProbe.swift)
+            // UJIAN GLES: jawab soalan paling kritikal projek (lihat GLProbe.swift).
+            // SIMPAN hasilnya - jangan emit sekarang, HTML belum bersedia.
             let gl = GLProbe.run()
             NSLog("%@", GLProbe.report(gl))
-            self.emit("glProbe", [
-                "ok": gl.ok,
-                "render": gl.triangleRendered,
-                "version": gl.version,
-                "renderer": gl.renderer,
-                "gl3": gl.gl3,
-                "pvrtc": gl.pvrtc,
-                "etc1": gl.etc1,
-                "s3tc": gl.s3tc,
-                "report": GLProbe.report(gl),
-            ])
+            self.glLock.lock(); self.glResult = gl; self.glLock.unlock()
+            self.sendGlProbeIfReady()
 
             let d = McDownloader(dataRoot: McConfig.dataRoot,
                                  privateDir: McConfig.privateRoot,
@@ -224,6 +222,28 @@ final class LauncherViewController: UIViewController {
             "engine": false,
             "androidUrl": "https://malaycity.com/mobile/MALAYCITY.apk",
             "note": "Klien GTA SA untuk iOS sedang dibangunkan. Buat masa ini, main di Android.",
+        ])
+    }
+
+    /// Hantar hasil ujian GLES bila HTML sudah bersedia DAN ujian sudah selesai.
+    /// Dipanggil dari dua tempat: selepas GLProbe.run() dan selepas HTML hantar "ready".
+    private func sendGlProbeIfReady() {
+        glLock.lock()
+        let gl = glResult
+        let ready = htmlReady
+        glLock.unlock()
+        guard ready, let gl = gl else { return }
+
+        emit("glProbe", [
+            "ok": gl.ok,
+            "render": gl.triangleRendered,
+            "version": gl.version,
+            "renderer": gl.renderer,
+            "gl3": gl.gl3,
+            "pvrtc": gl.pvrtc,
+            "etc1": gl.etc1,
+            "s3tc": gl.s3tc,
+            "report": GLProbe.report(gl),
         ])
     }
 
@@ -262,6 +282,10 @@ final class LauncherViewController: UIViewController {
     private func handle(_ fn: String, _ args: [Any]) {
         switch fn {
         case "ready":
+            // HTML siap: tandakan supaya hasil GLES (yg mungkin sudah selesai) dihantar.
+            glLock.lock(); htmlReady = true; glLock.unlock()
+            emitIosInfo()
+            sendGlProbeIfReady()
             bgQueue.async { [weak self] in
                 guard let self = self else { return }
                 var st: [String: Any] = [
@@ -274,7 +298,6 @@ final class LauncherViewController: UIViewController {
                 st["settings"] = set
                 self.updateSettingsCache(set)
                 self.emit("state", st)
-                self.emitIosInfo()
                 self.doCheck()
             }
 
@@ -453,6 +476,14 @@ extension LauncherViewController: WKNavigationDelegate, WKUIDelegate {
         let a = UIAlertController(title: "MALAYCITY", message: message, preferredStyle: .alert)
         a.addAction(UIAlertAction(title: "OK", style: .default) { _ in completionHandler() })
         present(a, animated: true)
+    }
+
+    /// Dokumen selesai dimuat. `window.MCL` kini wujud, jadi hasil GLES boleh dihantar
+    /// walaupun HTML belum panggil `ready` (jaring keselamatan kedua).
+    func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
+        NSLog("[MC] HTML selesai dimuat")
+        glLock.lock(); htmlReady = true; glLock.unlock()
+        sendGlProbeIfReady()
     }
 }
 

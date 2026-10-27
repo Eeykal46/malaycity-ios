@@ -368,6 +368,9 @@ var H = {
     b.style.display="block";
     b.textContent = (d.report || "").trim();
     b.style.color = d.render ? "#30D158" : "#FF6B80";
+    // Juga papar dlm pil atas supaya jelas kelihatan.
+    island(d.render ? "ok" : "err",
+           d.render ? "GLES BERFUNGSI · " + (d.renderer||"") : "GLES GAGAL · " + (d.version||""));
   }
 };
 
