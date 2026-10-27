@@ -7,10 +7,13 @@ enum McConfig {
     /// Fail manifest di website. Fail game dimuat turun dari "baseUrl" dlm manifest.
     static let manifestURL = URL(string: "https://malaycity.com/mobile/manifest.json")!
 
-    /// true = muat turun SEMUA fail tekstur (.dxt./.etc./.pvr.) tanpa ikut GPU.
-    /// iPhone = GPU PowerVR/Apple sahaja -> launcher Android dapat "pvr" atau "etc".
-    /// KEKAL true sehingga cache iOS (tekstur PVRTC) disediakan di hosting.
-    static let allGPUTextures = true
+    /// true = muat turun SEMUA fail tekstur (.dxt./.etc./.pvr.).
+    /// iOS: KEKAL false -> hanya tekstur pvr (GPU Apple/PowerVR) + fail biasa.
+    ///   Manifest ada 4 jenis: biasa 502 MB + pvr 286 + dxt 286 + etc 279 = 1.32 GB.
+    ///   iPhone 13 Pro hanya perlukan biasa+pvr = 0.77 GB (jimat 42%, ~46 minit pada
+    ///   352 KB/s). dxt = PC sahaja; etc = Android sahaja.
+    ///   Tukar ke true hanya jika ada masalah tekstur hilang.
+    static let allGPUTextures = false
 
     /// Bilangan fail dimuat turun serentak.
     static let parallel = 3

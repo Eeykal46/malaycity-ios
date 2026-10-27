@@ -22,19 +22,18 @@ enum McGPU {
         MTLCreateSystemDefaultDevice()?.name ?? "?"
     }
 
-    /// Seperti McGpu.detect(): "" = semua fail tekstur dimuat turun.
+    /// Jenis tekstur yang perlu untuk GPU ini.
+    /// iPhone/iPad arm64 = GPU PowerVR/Apple -> PVRTC ("pvr").
+    /// Manifest hosting memang ada tekstur pvr (21 fail, 286 MB), jadi ini selamat.
+    /// "" = muat turun semua jenis (jika PVRTC tak disokong / ujian).
     static func detect() -> String {
         NSLog("[MC_GPU] renderer=%@", renderer)
 
-        // Semakan sebenar jika cache PVRTC disediakan kelak:
-        //   iPhone (A7 ke atas) menyokong PVRTC -> "pvr".
-        //   Simulator PowerVR juga "pvr", tetapi simulator bukan sasaran.
         if McConfig.allGPUTextures { return "" }
 
         #if targetEnvironment(simulator)
-        return ""
+        return "pvr"          // simulator Apple juga PVRTC
         #else
-        // Semua iPhone arm64 menyokong PVRTC v2 (GPU PowerVR/Apple).
         return "pvr"
         #endif
     }

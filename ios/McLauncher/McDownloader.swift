@@ -572,9 +572,21 @@ enum McFileFetch {
         collector.waiter = sem
         session.dataTask(with: req).resume()
 
-        if sem.wait(timeout: .now() + McConfig.readTimeout * 6) == .timedOut {
-            session.invalidateAndCancel()
-            throw McError.network("tamat masa")
+        // WATCHDOG AKTIVITI (bukan had masa keseluruhan).
+        // Dulu had = readTimeout * 6 = 6 minit. Pada line perlahan (352 KB/s),
+        // fail 176 MB perlukan 8.6 minit -> GAGAL, cuba semula, gagal lagi (4x).
+        // Sekarang: satu-satunya sebab berhenti ialah TIADA data selama readTimeout.
+        // Fail besar boleh ambil masa berapa lama pun selagi data masih mengalir.
+        while true {
+            if sem.wait(timeout: .now() + 1.0) == .success { break }
+            if collector.finishedFlag { break }
+            let idle = Int64(DispatchTime.now().uptimeNanoseconds / 1_000_000_000)
+                - collector.lastActivitySecond
+            if idle > Int64(McConfig.readTimeout) {
+                collector.markTimeout()
+                session.invalidateAndCancel()
+                throw McError.network("tiada data selama \(McConfig.readTimeout) saat")
+            }
         }
         session.finishTasksAndInvalidate()
         if let err = collector.error { throw err }
@@ -590,6 +602,12 @@ enum McFileFetch {
         private(set) var error: Error?
         private(set) var written: Int64 = 0
 
+        /// true bila tugas selesai (untuk gelung watchdog berhenti).
+        private(set) var finishedFlag = false
+        /// Saat (uptime) data terakhir diterima - asas watchdog aktiviti.
+        private(set) var lastActivitySecond = Int64(DispatchTime.now().uptimeNanoseconds / 1_000_000_000)
+        private let flagLock = NSLock()
+
         private var handle: FileHandle?
         private var appendFrom: Int64
         private var finished = false
@@ -601,12 +619,24 @@ enum McFileFetch {
         }
 
         private func finish(_ err: Error?) {
-            if finished { return }
+            flagLock.lock()
+            if finished { flagLock.unlock(); return }
             finished = true
+            finishedFlag = true
+            flagLock.unlock()
             if error == nil, let err = err { error = err }
             try? handle?.close()
             handle = nil
             waiter?.signal()
+        }
+
+        /// Dipanggil watchdog bila tiada data terlalu lama.
+        func markTimeout() {
+            flagLock.lock()
+            let alreadyDone = finished
+            flagLock.unlock()
+            if alreadyDone { return }
+            finish(McError.network("tiada data - sambungan terhenti"))
         }
 
         func urlSession(_ session: URLSession, dataTask: URLSessionDataTask,
@@ -652,6 +682,8 @@ enum McFileFetch {
                 return
             }
             written += Int64(data.count)
+            // Tanda hayat: watchdog guna ini untuk tahu data masih mengalir.
+            lastActivitySecond = Int64(DispatchTime.now().uptimeNanoseconds / 1_000_000_000)
             onBytes(Int64(data.count))
         }
 
