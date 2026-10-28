@@ -1,0 +1,110 @@
+name: Bina ANGLE iOS
+
+# Bina ANGLE (EGL + GLES di atas Metal) untuk iOS arm64.
+#
+# KENAPA PERLU: iOS tiada EGL langsung. Enjin GTA SA memerlukan GLES.
+# Husk guna ANGLE sebagai lapisan EGL/GLES -> Metal. ANGLE tidak disertakan
+# dalam repo Husk (2GB WebKit) — ia mesti dibina sekali di macOS.
+#
+# Hasil: artifact "angle-ios" berisi libANGLE-shared.dylib
+# Letak di: ios/husk/angle/libANGLE-shared.dylib
+#
+# Skrip ini diambil terus daripada Husk scripts/build_angle_ios.sh (GPL-2.0).
+# Jalankan SEKALI sahaja, kemudian commit dylib ke repo.
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - '.github/workflows/angle.yml'
+
+jobs:
+  build:
+    runs-on: macos-latest
+    timeout-minutes: 180
+    steps:
+      - name: Ambil source
+        uses: actions/checkout@v4
+
+      - name: Pilih Xcode
+        run: |
+          sudo xcode-select -s /Applications/Xcode.app
+          xcodebuild -version
+
+      - name: Cache WebKit ANGLE
+        uses: actions/cache@v4
+        with:
+          path: third_party/gpu/webkit
+          key: webkit-angle-${{ runner.os }}-v1
+
+      - name: Sparse clone WebKit (ANGLE sahaja)
+        run: |
+          set -euo pipefail
+          mkdir -p third_party/gpu
+          WK=third_party/gpu/webkit
+          if [ ! -d "$WK" ]; then
+            git clone --depth 1 --filter=blob:none --sparse \
+              https://github.com/WebKit/WebKit.git "$WK"
+          fi
+          cd "$WK"
+          git sparse-checkout set \
+            Source/ThirdParty/ANGLE Configurations Tools/Scripts Tools/ccache
+          echo "saiz: $(du -sh . | cut -f1)"
+
+      - name: "Bina ANGLE (2 laluan - nama standard + alias)"
+        run: |
+          set -euo pipefail
+          WK=third_party/gpu/webkit
+          LOG=angle-build.log
+          ALIASES=third_party/gpu/angle-aliases.txt
+          mkdir -p third_party/gpu
+          cd "$WK/Source/ThirdParty/ANGLE"
+
+          angle_build () {
+            local ldflags=()
+            if [ -n "${1:-}" ]; then
+              ldflags=("OTHER_LDFLAGS=\$(inherited) -Wl,-alias_list,$1")
+            fi
+            env -i PATH="$PATH" HOME="$HOME" xcodebuild archive \
+              -archivePath ANGLE -scheme ANGLE \
+              -sdk iphoneos -arch arm64 -configuration Release \
+              WEBCORE_LIBRARY_DIR="/usr/local/lib" NORMAL_UMBRELLA_FRAMEWORKS_DIR="" \
+              CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO \
+              WK_AVAILABILITY_OVERLAY_FLAGS="" WK_AVAILABILITY_OVERLAY_SWIFT_FLAGS="" \
+              IPHONEOS_DEPLOYMENT_TARGET="15.5" \
+              OTHER_CFLAGS='$(inherited) -Wno-unguarded-availability-new' \
+              OTHER_CPLUSPLUSFLAGS='$(inherited) -Wno-unguarded-availability-new' \
+              ${ldflags[@]+"${ldflags[@]}"} \
+              > "/tmp/$LOG" 2>&1 \
+            || { echo "ANGLE gagal:" >&2
+                 grep -a "error:\|^ld: " "/tmp/$LOG" | head -20 >&2; exit 1; }
+          }
+
+          echo "==> laluan 1"
+          angle_build ""
+
+          echo "==> jana alias EGL"
+          nm -g "ANGLE.xcarchive/Products/usr/local/lib/libANGLE-shared.dylib" \
+            | awk '$2=="T"{print $3}' | grep -E '^_EGL_' \
+            | awk '{o=$1; a=$1; sub(/^_EGL_/,"_egl",a); print o, a}' > "$ALIASES"
+          echo "    $(wc -l < "$ALIASES") alias"
+
+          echo "==> laluan 2"
+          angle_build "$ALIASES"
+
+          DYLIB="ANGLE.xcarchive/Products/usr/local/lib/libANGLE-shared.dylib"
+          test -f "$DYLIB" || { echo "tiada dylib"; exit 1; }
+          mkdir -p "$GITHUB_WORKSPACE/out"
+          cp "$DYLIB" "$GITHUB_WORKSPACE/out/libANGLE-shared.dylib"
+          install_name_tool -id "@rpath/libANGLE-shared.dylib" \
+            "$GITHUB_WORKSPACE/out/libANGLE-shared.dylib"
+          ls -lh "$GITHUB_WORKSPACE/out/"
+          echo "EGL standard: $(nm -g "$GITHUB_WORKSPACE/out/libANGLE-shared.dylib" | grep -c ' T _egl')"
+
+      - name: Muat naik ANGLE
+        uses: actions/upload-artifact@v4
+        with:
+          name: angle-ios
+          path: out/libANGLE-shared.dylib
+          if-no-files-found: error
+          retention-days: 30

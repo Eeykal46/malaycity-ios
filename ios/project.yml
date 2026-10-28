@@ -37,23 +37,17 @@ targets:
       # (`launcher/` = salinan index.html Android, dibuat oleh preGenCommand di atas)
       - path: launcher
         type: folder
-      # Fasa 3: lapisan ganti Android -> iOS untuk enjin GTA SA.
-      # NOTA: TANPA `type:` supaya XcodeGen menganggapnya sebagai SOURCE
-      # (dikompil). `type: group` hanya kumpulan navigasi - fail tidak dikompil,
-      # itulah sebabnya simbol shim tiada dlm binari pada build pertama.
+      # Fasa 3: lapisan ganti Android -> iOS.
+      # enjin/ = kod kita sendiri (shim ringkas, bridging header)
       - path: enjin
-      # Kod Husk (GPL-2.0) - loader ELF arm64 + shim bionic + framework.
-      # Lihat KOD_PIHAK_KETIGA.md. Ini yang membolehkan libGTASA.so (ELF)
-      # berjalan di iOS tanpa menukar binari.
+      # Kod Husk 3.1 (GPL-2.0): translation layer penuh.
+      #   husk/tl-next/  - 112 fail termasuk husk-tl-gtasa.c (driver GTA SA)
+      #   husk/ios-jit/  - JIT, audio, display
+      #   husk/angle/    - libANGLE-shared.dylib (dibina oleh angle.yml)
+      # Lihat KOD_PIHAK_KETIGA.md.
       - path: husk
         excludes:
           - "LICENSE-HUSK-GPL2.txt"
-      # APK Android yang dibundle dalam app (35.8 MB).
-      # Ini barang mobile kau - enjin + client + assets - supaya Husk boleh
-      # menjalankannya TANPA muat turun dan TANPA APK berasingan.
-      # Dijana semula dengan: ios/alat/bundle_apk.ps1
-      - path: enjin/bundel/MALAYCITY.apk
-        buildPhase: resources
     settings:
       base:
         PRODUCT_NAME: McLauncher
@@ -65,25 +59,24 @@ targets:
         SUPPORTS_MACCATALYST: NO
         ENABLE_USER_SCRIPT_SANDBOXING: NO
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
-        # shim guna os_log, EAGLContext, mmap - perlu disasarkan ke iOS 17
         IPHONEOS_DEPLOYMENT_TARGET: "17.0"
         CLANG_CXX_LANGUAGE_STANDARD: "c++20"
         CLANG_ENABLE_OBJC_ARC: YES
-        # Dedahkan API C Husk kepada Swift (tanpa ini: cannot find 'husk_tl_scan')
+        # Dedahkan API C Husk kepada Swift
         SWIFT_OBJC_BRIDGING_HEADER: enjin/McLauncher-Bridging-Header.h
-        # Header Husk dlm folder husk/ - perlu dicari
-        HEADER_SEARCH_PATHS: "$(inherited) $(SRCROOT)/husk $(SRCROOT)/enjin"
+        HEADER_SEARCH_PATHS: "$(inherited) $(SRCROOT)/husk/tl-next $(SRCROOT)/husk/ios-jit $(SRCROOT)/enjin"
         # Simbol mesti kelihatan (enjin dimuat melalui rujukan langsung)
         OTHER_CFLAGS: "$(inherited) -fvisibility=default"
         OTHER_CPLUSPLUSFLAGS: "$(inherited) -fvisibility=default"
-        # Buang amaran "unused variable" untuk stub audio sementara.
         GCC_WARN_UNUSED_VARIABLE: NO
     dependencies:
-      # OpenGL ES - Husk guna ANGLE untuk GLES enjin
       - sdk: OpenGLES.framework
       - sdk: GLKit.framework
       - sdk: AudioToolbox.framework
       - sdk: AVFoundation.framework
+      - sdk: Metal.framework
+      - sdk: MetalKit.framework
+      - sdk: QuartzCore.framework
 
 schemes:
   McLauncher:

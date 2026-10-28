@@ -244,35 +244,23 @@ final class LauncherViewController: UIViewController {
         let ready = htmlReady
         glLock.unlock()
         guard ready, !hk.isEmpty else { return }
-        emit("huskProbe", ["report": hk, "ada": McHusk.shared.tersedia])
+        emit("huskProbe", ["report": hk, "ada": mc_husk_semak_api() == 1])
     }
 
-    /// Ujian Husk: adakah API translation layer ada, dan apa kata ujian peranti?
-    /// Ini yang menentukan sama ada APK Android boleh dijalankan di app ini.
+    /// Ujian Husk: adakah API translation layer ada, dan apa persediaan enjin?
     private func ujianHusk() {
-        let h = McHusk.shared
-        var lap = "=== TRANSLATION LAYER (HUSK) ===\n"
-        lap += "API dilink : \(h.tersedia ? "YA" : "TIDAK")\n"
+        var lap = "=== TRANSLATION LAYER (HUSK 3.1) ===\n"
+        let api = mc_husk_semak_api() == 1
+        lap += "API dilink : \(api ? "YA" : "TIDAK")\n\n"
 
-        if !h.tersedia {
-            lap += "\nHusk tidak dilink. Semak:\n"
-            lap += "  - ios/husk/*.c dimasukkan sbg source dlm project.yml\n"
-            lap += "  - simbol husk_tl_* tidak di-strip\n"
+        if !api {
+            lap += "Husk tidak dilink. Semak:\n"
+            lap += "  - ios/husk/tl-next/*.c dimasukkan sbg source dlm project.yml\n"
+            lap += "  - bridging header ada\n"
         } else {
-            let chk = h.ujianPeranti(bolehLaksana: false)
-            lap += "\nUJIAN PERANTI:\n\(chk)\n"
-
-            // APK dibundle dalam app (bukan dimuat turun, bukan manual).
-            if let apk = h.apkBundel {
-                lap += "\nAPK bundel : \(URL(fileURLWithPath: apk).lastPathComponent)"
-                if let sz = try? FileManager.default.attributesOfItem(atPath: apk)[.size] as? NSNumber {
-                    lap += " (\(sz.intValue / 1048576) MB)"
-                }
-                let rep = h.laporanScan(apk: apk)
-                lap += "\nLAPORAN SCAN:\n\(rep.prefix(2000))"
-            } else {
-                lap += "\nAPK bundel : TIADA (semak ios/enjin/bundel/MALAYCITY.apk)"
-            }
+            let (ok, p) = McHuskGTASA.shared.semakPersediaan()
+            lap += p
+            lap += "\n\n\(ok ? "ENJIN SEDIA DIMULAKAN" : "BELUM SEDIA")"
         }
 
         NSLog("%@", lap)
@@ -417,42 +405,16 @@ final class LauncherViewController: UIViewController {
             play(nick)
 
         case "mulaEnjin":
-            // Jalankan APK Android yang dibundle melalui Husk.
-            // Ini ganti "main di Android" - sekarang enjin jalan di app ini.
-            bgQueue.async { [weak self] in
+            // Jalankan enjin GTA SA melalui Husk 3.1 (tl_ga_start + tl_ga_run).
+            // Launcher iOS uruskan data; Husk cuma jalankan enjin.
+            emit("enjinHasil", ["ok": false, "msg": "Memulakan enjin…"])
+            let w = 1280, hgt = 720        // landscape, akan dilaraskan
+            McHuskGTASA.shared.mula(lebar: w, tinggi: hgt) { [weak self] ok, msg in
                 guard let self = self else { return }
-                let h = McHusk.shared
-                guard h.tersedia else {
-                    self.emit("enjinHasil", [
-                        "ok": false,
-                        "msg": "Translation layer tidak dilink",
-                    ])
-                    return
-                }
-                guard let apk = h.apkBundel else {
-                    self.emit("enjinHasil", [
-                        "ok": false,
-                        "msg": "APK bundel tiada dlm app",
-                    ])
-                    return
-                }
-                NSLog("[MC] mulaEnjin: %@", apk)
-                let ok = h.mula(apk: apk, saat: 0)
-                var log = ""
-                if ok {
-                    // tunggu sehingga 3 saat untuk frame pertama / log
-                    var n = 0
-                    while n < 30 && !h.selesai {
-                        Thread.sleep(forTimeInterval: 0.1)
-                        n += 1
-                        if h.frame > 0 { break }
-                    }
-                    log = h.log()
-                }
                 self.emit("enjinHasil", [
                     "ok": ok,
-                    "frame": h.frame,
-                    "log": String(log.suffix(3000)),
+                    "frame": McHuskGTASA.shared.frame,
+                    "msg": msg,
                 ])
             }
 
