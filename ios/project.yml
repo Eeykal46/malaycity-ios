@@ -39,7 +39,22 @@ targets:
         type: folder
       # Fasa 3: lapisan ganti Android -> iOS.
       # enjin/ = kod kita sendiri (shim ringkas, bridging header)
+      # Kod kita sendiri (bridging header, mc_husk_bridge.c, shim)
       - path: enjin
+        excludes:
+          - "bundel/**"
+      # Lib Android yang dibundle sebagai RESOURCE (bukan dikompil).
+      # Husk memetakan ELF ini ke memori iOS sendiri - dyld tidak terlibat.
+      #   libGame.so        = libGTASA.so (nama berbeza; Husk cari "libGame.so")
+      #   libsamp.so        = client SA-MP (RakNet, netgame, ImGui)
+      #   libSCAnd.so       = RenderWare Android
+      #   libOpenAL64.so    = audio
+      #   libbass.so        = audio stream
+      #   libshadowhook.so  = inline hook
+      # 17.36 MB. TIDAK termasuk libluajit/libmonetloader (arahan dia).
+      # Jana semula: ios/alat/bundle_lib.ps1
+      - path: enjin/bundel/lib
+        type: folder
       # Kod Husk 3.1 (GPL-2.0): translation layer penuh.
       #   husk/tl-next/  - 112 fail termasuk husk-tl-gtasa.c (driver GTA SA)
       #   husk/ios-jit/  - JIT, audio, display
