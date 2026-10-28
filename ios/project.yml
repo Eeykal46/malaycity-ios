@@ -63,6 +63,15 @@ targets:
       - path: husk
         excludes:
           - "LICENSE-HUSK-GPL2.txt"
+          # Fail ios-jit yang perlukan header QEMU (emulation penuh, bukan
+          # translation layer). Kita guna tl-next untuk enjin, bukan QEMU.
+          # xmem guna dlsym("husk_ios_jit_reserve_bottom") - pilihan.
+          - "ios-jit/husk-snapshot.c"
+          - "ios-jit/husk-balloon.c"
+          - "ios-jit/husk-display.c"
+          - "ios-jit/husk-display-gl.c"
+          # ios-jit/husk-ios-jit.c = JIT allocator (tak perlukan QEMU) - KEKAL
+          # ios-jit/husk-audio.c = audio host - KEKAL
     settings:
       base:
         PRODUCT_NAME: McLauncher
