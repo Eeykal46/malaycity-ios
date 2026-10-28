@@ -97,6 +97,8 @@ targets:
       - sdk: Metal.framework
       - sdk: MetalKit.framework
       - sdk: QuartzCore.framework
+      # res_9_* (resolver): husk-tl-bionic-net.c guna untuk DNS/getservers
+      - sdk: libresolv.tbd
 
 schemes:
   McLauncher:
