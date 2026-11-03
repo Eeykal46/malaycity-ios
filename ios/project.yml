@@ -63,11 +63,14 @@ targets:
       - path: husk
         excludes:
           - "LICENSE-HUSK-GPL2.txt"
-          # Seluruh ios-jit perlukan header QEMU (tcg/, qemu/). Ia untuk
-          # emulation penuh — kita guna translation layer (tl-next) sahaja.
-          # husk-tl-xmem.c guna dlsym("husk_ios_jit_reserve_bottom"): jika
-          # tiada, ia jatuh ke MAP_JIT biasa (fallback dalam xmem).
+          # ios-jit dibuang dalam 3.3 (kita guna tl-next sahaja)
           - "ios-jit/**"
+          # Fail 3.3 yang perlukan dependency luar (QEMU/Metal/glib):
+          #   husk-tl-vulkan.m    - perlukan Vulkan (MoltenVK)
+          #   husk-tl-aot.c       - AOT compiler, perlukan clang
+          #   husk-tl-binder.c / servicemanager.c / aosp.c - Android system services
+          #     (tidak perlu untuk GTA SA yang guna oswrapper Rockstar, bukan binder)
+          # Kalau enjin gagal tanpa ini, tambah balik satu per satu.
     settings:
       base:
         PRODUCT_NAME: McLauncher

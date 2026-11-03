@@ -35,9 +35,9 @@ final class McHuskGTASA {
         // Lib dibundle dalam app (enjin/bundel/lib) — bukan dimuat turun.
         if let soPath = McHuskGTASA.cariLib("libGame.so")
                     ?? McHuskGTASA.cariLib("libGTASA.so") {
-            let mb = (try? FileManager.default.attributesOfItem(atPath: soPath)[.size] as? NSNumber)?.intValue ?? 0
+            let mb = Double((try? FileManager.default.attributesOfItem(atPath: soPath)[.size] as? NSNumber)?.intValue ?? 0) / 1048576.0
             let dari = soPath.contains(".app/") ? "bundle" : "Documents"
-            lap += "libGame.so  : ADA (\(mb / 1048576) MB, \(dari))\n"
+            lap += String(format: "libGame.so  : ADA (%.1f MB, %@)\n", mb, dari)
         } else {
             lap += "libGame.so  : TIADA (bundle enjin/bundel/lib + Documents/lib)\n"
             ok = false
